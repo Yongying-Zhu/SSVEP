@@ -1,0 +1,16 @@
+bleak>=0.22
+pylsl>=1.16
+loguru>=0.7
+numpy>=1.23,<2.3
+
+# Required by the online SSVEP classifier.
+scipy>=1.9
+scikit-learn>=1.2
+
+# Optional recording/analysis tools from the original local project.
+pandas>=1.5
+mne>=1.3
+
+# Optional: only needed for ssvep_stimulus.
+# psychopy
+

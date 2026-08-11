@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>eeg_bci</name>
+  <version>0.1.0</version>
+  <description>BLE-to-LSL and LSL-to-ROS 2 pipeline for the 8-channel EEG headband.</description>
+  <maintainer email="zyy@example.com">zyy</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_python</buildtool_depend>
+  <depend>rclpy</depend>
+  <depend>std_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>eeg_interfaces</depend>
+  <exec_depend>turtlesim</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

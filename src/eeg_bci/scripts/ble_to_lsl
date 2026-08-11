@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+set -e
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+if [ -n "${EEG_WORKSPACE_ROOT:-}" ]; then
+  EEG_ROOT="${EEG_WORKSPACE_ROOT}"
+elif [ -d "${SCRIPT_DIR}/../../../src/eeg_bci" ]; then
+  EEG_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
+elif [ -d "${SCRIPT_DIR}/../../../../src/eeg_bci" ]; then
+  EEG_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd)"
+else
+  echo "Cannot find the EEG workspace; set EEG_WORKSPACE_ROOT." >&2
+  exit 1
+fi
+EEG_PYTHON="${EEG_ROOT}/.venv/bin/python"
+if [ ! -x "${EEG_PYTHON}" ]; then EEG_PYTHON="$(command -v python3)"; fi
+export PYTHONPATH="${EEG_ROOT}/build/eeg_bci:${EEG_ROOT}/install/lib/python3.10/site-packages:${PYTHONPATH:-}"
+exec "${EEG_PYTHON}" -m eeg_bci.ble_to_lsl "$@"

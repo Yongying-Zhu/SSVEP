@@ -1,0 +1,21 @@
+/**:
+  ros__parameters:
+    stream_type: EEG
+    expected_channels: 8
+    accept_soft_label: true
+    topic: /eeg/frame
+    quality_topic: /eeg/quality
+    window_seconds: 4.0
+    update_period: 0.4
+    harmonics: 4
+    filter_banks: 3
+    minimum_confidence: 0.24
+    required_consecutive_results: 2
+    use_trained_model: true
+    model_reject_probability: 0.55
+    model_reject_probability_forward: 0.4325
+    model_reject_probability_left: 0.2621
+    model_reject_probability_right: 0.1485
+    model_reject_probability_backward: 0.1021
+    model_reject_probability_stop: 0.3108
+    model_reject_probability_idle: 0.1513

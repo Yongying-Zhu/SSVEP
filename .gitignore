@@ -1,0 +1,14 @@
+build/
+install/
+log/
+logs/
+.venv/
+.vscode/
+backups/
+analysis_results_reanalysis/
+ONE_CLICK_START.md
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
