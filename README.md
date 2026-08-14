@@ -1,135 +1,304 @@
-# ssvep_eeg_fbcca(LR)_turtlesim
+# SSVEP_EEG_FBCCA_(WCHAIR)
 
-This repository contains a ROS 2 Humble workspace for an 8-channel BLE EEG
-headband and SSVEP-based control of a turtlesim robot. The system receives EEG
-samples over Bluetooth, publishes them through LSL and ROS 2, classifies SSVEP
-commands, and converts the commands into safe `geometry_msgs/msg/Twist`
-motion.
+This project uses EEG signals to control a ROS 2 `turtlesim` robot through
+SSVEP and filter-bank canonical correlation analysis (FBCCA).
 
-The current target is a controlled turtlesim demonstration. The generic
-`cmd_vel` bridge is included for later robot integration, but this project is
-not a certified medical, safety, or mobility controller.
+<p align="center">
+  <img src="supplementary_resources/turtlesim_trimmed.gif" width="500" alt="Turtlesim controlled by EEG">
+</p>
+
+<p align="center"><em>Result of controlling the turtlesim robot with EEG signals.</em></p>
 
 > [!WARNING]
-> Test with turtlesim or an unloaded robot first. Keep a human operator ready
-> to stop the system. Do not connect this software to a powered robot as the
-> only safety layer.
+> This project is a research and simulation prototype. Test with turtlesim or
+> an unloaded robot first. Keep a human operator ready to stop the system. Do
+> not connect it to a powered wheelchair or mobile robot as the only safety
+> layer.
 
-## System Architecture
+## 1. Baseline Control Performance
 
-```text
-8-channel BLE EEG headband
-          |
-          v
-     ble_to_lsl
-          |
-          v
-     LSL stream: BCIPro / EEG
-          |
-          v
-      lsl_to_ros2
-          |
-          +--> /eeg/frame       EEGFrame
-          +--> /eeg/quality     SignalQuality
-          |
-          v
-    ssvep_classifier
-          |
-          v
-     /ssvep/command            SSVEPCommand
-          |
-          v
-   ssvep_to_turtlesim
-          |
-          +--> /turtle1/cmd_vel
-          +<-- /turtle1/pose
-          |
-          v
-       turtlesim
+All performance results in this section use the original FBCCA framework. No
+additional classifier or rejection module is active for these measurements.
+Two experimental enhancements exist in the code, but both are disabled in the
+current `eeg.yaml` configuration:
+
+```yaml
+use_score_margin: false
+use_trained_model: false
 ```
 
-The PsychoPy stimulus publishes `/ssvep/stimulus_active` as a safety gate and
-embeds a live turtlesim pose mirror in the stimulation window.
+The results below therefore describe the original FBCCA control path.
 
-## Tested Configuration
+### 1.1 Switching Latency
 
-| Component | Configuration |
-| --- | --- |
-| EEG device | VIS_BCI_DFED857C BLE headband |
-| EEG channels | 8 |
-| Sampling rate | 250 Hz |
-| Host OS | Ubuntu 22.04 |
-| ROS 2 | Humble |
-| Python | 3.10 |
-| SSVEP window | 4 seconds |
-| Classifier update period | 0.4 seconds |
-| SSVEP targets | 8, 9, 10, 11, 12, 13 Hz |
-| Motion command | `linear.x=1.0`, `angular.z=1.5` |
+For an already running classifier, the fastest transition is approximately
+`0.4-0.9 s` when the mixed sliding window becomes discriminative immediately.
+The conservative case is approximately `4.4-4.9 s` when the old command must
+leave the 4-second window before the new frequency becomes reliable.
 
-## Repository Layout
+In the table:
+
+- `First EEG -> cmd_vel` starts at the first recorded `/eeg/frame` and includes
+  filling the initial 4-second EEG window.
+- `Correct FBCCA -> cmd_vel` starts at the first correct FBCCA candidate and
+  measures confirmation plus the command bridge publication delay.
+- Variance is the sample variance with denominator `n - 1`.
+
+| Command | Normal trials | First EEG -> cmd_vel mean | Variance | Correct FBCCA -> cmd_vel mean | Variance |
+|---|---:|---:|---:|---:|---:|
+| forward | 6/10 | 4.731 s | 0.025132 | 0.456 s | 0.001274 |
+| backward | 4/10 | 4.720 s | 0.054528 | 0.435 s | 0.000739 |
+| left | 4/4 | 4.505 s | 0.023268 | 0.439 s | 0.000307 |
+| right | 4/4 | 4.742 s | 0.049954 | 0.433 s | 0.000683 |
+| stop | 4/4 | 4.665 s | 0.016971 | 0.465 s | 0.000376 |
+
+The first latency mean is around 4.5-4.8 seconds because it contains the
+4-second window, the 0-0.4-second classifier timer phase, one 0.4-second
+confirmation interval, and up to 0.1 seconds for the `cmd_vel` publisher.
+The second latency mean is around 0.43-0.46 seconds because it starts after
+FBCCA has already produced a candidate and mainly contains the next
+confirmation cycle and command publication.
+
+The timing calculation is:
+
+```text
+First EEG -> cmd_vel
+= 4.0 s window
+  + 0-0.4 s wait for the next classification timer
+  + 0.4 s second consistent result
+  + 0-0.1 s cmd_vel publication
+= approximately 4.4-4.9 s
+
+Correct FBCCA -> cmd_vel
+= 0.4 s confirmation
+  + 0-0.1 s cmd_vel publication
+= approximately 0.4-0.5 s
+```
+
+Repeated confidence rejection, changing candidates, poor signal quality, or a
+failed confirmation can extend the transition time beyond these ideal ranges.
+
+### 1.2 Raw FBCCA Command Accuracy
+
+The following table measures the raw FBCCA top-1 result before confidence
+thresholding, consecutive confirmation, or command publication:
+
+- `Raw accuracy` is the percentage of 4-second windows whose highest FBCCA
+  frequency matches the expected command.
+- `Single` and `All` identify the stimulation recording mode.
+- `Majority-trial accuracy` counts a trial as correct when its majority of raw
+  windows predicts the expected command.
+
+| Command | Single trials | Single windows | Single raw accuracy | All trials | All windows | All raw accuracy | Overall trials | Overall windows | Overall raw accuracy | Majority-trial accuracy |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| forward | 5 | 192 | 92.71% | 5 | 193 | 96.89% | 10 | 385 | 94.81% | 100.00% |
+| backward | 5 | 193 | 63.73% | 5 | 192 | 64.58% | 10 | 385 | 64.16% | 90.00% |
+| left | 2 | 76 | 97.37% | 2 | 76 | 100.00% | 4 | 152 | 98.68% | 100.00% |
+| right | 2 | 78 | 100.00% | 2 | 77 | 97.40% | 4 | 155 | 98.71% | 100.00% |
+| stop | 2 | 76 | 84.21% | 2 | 76 | 73.68% | 4 | 152 | 78.95% | 75.00% |
+
+Overall raw window accuracy is **84.21%** (`1035/1229` windows). Overall
+majority-trial accuracy is **93.75%** (`30/32` trials).
+
+The two 100% values are trial-level majority results, not perfect window-level
+classification. For example, all forward trials had forward as the majority
+prediction even though the forward window accuracy was 94.81%. A few wrong
+windows can therefore coexist with 100% majority-trial accuracy.
+
+### 1.3 Closed Eyes and Free View Without a Target
+
+These recordings have no expected visual target. Plain FBCCA must still choose
+one of its reference frequencies, so it has no native unknown or rejection
+class at the raw-score stage.
+
+| Condition | Trials | FBCCA decisions | Raw rejection rate | Most common raw candidate | Raw candidate distribution | Mean confidence | Valid=true false accepts | False-acceptance rate | Trials with false accept |
+|---|---:|---:|---:|---|---|---:|---:|---:|---:|
+| close_eyes | 2 | 76 | 0.00% | backward | forward 11.84%, backward 51.32%, left 13.16%, right 19.74%, stop 3.95%, idle 0.00% | 0.266 | 49 | 64.47% | 2/2 |
+| free_view | 2 | 76 | 0.00% | forward | forward 53.95%, backward 3.95%, left 23.68%, right 5.26%, stop 5.26%, idle 7.89% | 0.242 | 35 | 46.05% | 2/2 |
+
+With eyes closed, increased alpha-band activity, commonly concentrated around
+8-13 Hz, can overlap the 11 Hz backward reference. That explains the strong
+backward bias in the closed-eyes recordings and can cause backward-like false
+commands.
+
+During free view, attention is not locked to one target. The stimulation
+screen, the embedded turtlesim view, and other visual elements can shift gaze
+and visual attention, producing unstable or incidental frequency evidence.
+The following screenshot shows the visual environment used during free view:
+
+<p align="center">
+  <img src="supplementary_resources/free_view_turtlesim.png" width="900" alt="Turtlesim and SSVEP stimulation environment">
+</p>
+
+The recorded effects are illustrated below:
+
+<table>
+  <tr>
+    <td align="center"><strong>Free view</strong><br><img src="supplementary_resources/turtlesim_dynamic.gif" width="420" alt="Turtlesim during free view"></td>
+    <td align="center"><strong>Closed eyes</strong><br><img src="supplementary_resources/turtlesim_trimmed_new.gif" width="420" alt="Turtlesim during closed eyes"></td>
+  </tr>
+</table>
+
+In both conditions, raw FBCCA produces a candidate for every decision. The
+`valid=true` counts show why a later rejection strategy is important before
+using the output to drive a real robot.
+
+## 2. System and Algorithm Architecture
+
+### 2.1 Runtime Data Flow
+
+```mermaid
+flowchart LR
+    A[8-channel BLE EEG headband<br/>250 Hz] --> B[ble_to_lsl.py]
+    B --> C[LSL stream<br/>BCIPro / EEG]
+    C --> D[lsl_to_ros2.py]
+    D --> E[/eeg/frame<br/>EEGFrame]
+    D --> F[/eeg/quality<br/>SignalQuality]
+    E --> G[ssvep_classifier.py]
+    F --> G
+    G --> H[4 s sliding window<br/>1000 samples]
+    H --> I[3 filter banks]
+    I --> J[CCA with harmonic references]
+    J --> K[Six FBCCA scores]
+    K --> L[Confidence and<br/>two-result confirmation]
+    L --> M[/ssvep/command<br/>SSVEPCommand]
+    M --> N[ssvep_to_turtlesim.py]
+    N --> O[MotionCommandAccumulator]
+    O --> P[/turtle1/cmd_vel<br/>Twist]
+    P --> Q[turtlesim]
+    Q --> R[/turtle1/pose]
+    R --> N
+    R --> S[PsychoPy stimulus<br/>embedded turtle feedback]
+```
+
+### 2.2 Code Layout
 
 ```text
 eeg/
 ├── README.md
 ├── requirements.txt
 ├── start_eeg_turtlesim.sh
-├── src/
-│   ├── eeg_bci/
-│   │   ├── config/
-│   │   ├── eeg_bci/
-│   │   │   ├── ble_to_lsl.py
-│   │   │   ├── lsl_to_ros2.py
-│   │   │   ├── ssvep_classifier.py
-│   │   │   ├── ssvep_stimulus.py
-│   │   │   ├── ssvep_to_turtlesim.py
-│   │   │   └── models/
-│   │   ├── launch/
-│   │   └── test/
-│   └── eeg_interfaces/
-└── <command>_<trial>/      ROS 2 rosbag2 recordings
+├── supplementary_resources/
+│   ├── free_view_turtlesim.png
+│   ├── turtlesim_dynamic.gif
+│   ├── turtlesim_trimmed.gif
+│   └── turtlesim_trimmed_new.gif
+├── eeg_robag/
+│   └── <command_trial>/
+│       ├── <trial>_0.db3
+│       └── metadata.yaml
+└── src/
+    ├── eeg_interfaces/
+    │   └── msg/
+    │       ├── EEGFrame.msg
+    │       ├── SignalQuality.msg
+    │       └── SSVEPCommand.msg
+    └── eeg_bci/
+        ├── config/eeg.yaml
+        ├── launch/
+        ├── scripts/
+        └── eeg_bci/
+            ├── ble_to_lsl.py
+            ├── lsl_to_ros2.py
+            ├── ssvep_classifier.py
+            ├── ssvep_stimulus.py
+            ├── ssvep_to_turtlesim.py
+            ├── ssvep_to_cmd_vel.py
+            └── motion_controller.py
 ```
 
-The repository intentionally excludes `build/`, `install/`, `log/`, runtime
-logs, the Python virtual environment, editor metadata, backups, and generated
-analysis reports. The rosbag recordings are included as the training and
-validation dataset.
+### 2.3 SSVEP
 
-## SSVEP Commands
+Steady-state visual evoked potential (SSVEP) is the periodic EEG response
+elicited when a person looks at a flickering visual stimulus. If a target
+flickers at frequency `f`, the EEG can contain energy at `f` and its harmonics.
+The classifier uses the frequency with the strongest agreement to infer the
+intended command.
+
+### 2.4 FBCCA
+
+Filter-bank canonical correlation analysis (FBCCA) processes each 4-second
+window as follows:
+
+1. Apply three filter-bank bands to the eight-channel EEG.
+2. Build sine/cosine reference signals for each target frequency and four
+   harmonics.
+3. Use CCA to measure the correlation between filtered EEG and each reference.
+4. Combine the weighted correlation scores across filter banks.
+5. Select the highest raw FBCCA score and compute normalized confidence.
+6. Require the confidence threshold and two consistent results before
+   publishing `valid=true`.
+
+The currently reported baseline has `use_score_margin: false` and
+`use_trained_model: false`, so the active decision path is raw FBCCA plus the
+configured confidence thresholds and consecutive confirmation.
+
+### 2.5 SSVEP Command Mapping
 
 | Frequency | Command | Stimulus position |
-| ---: | --- | --- |
-| 8 Hz | `forward` | lower left |
-| 9 Hz | `left` | upper right |
-| 10 Hz | `right` | lower right |
-| 11 Hz | `backward` | upper left |
-| 12 Hz | `stop` | lower center |
-| 13 Hz | `idle` | classifier-only class |
+|---:|---|---|
+| 8 Hz | `forward` | bottom-left |
+| 9 Hz | `left` | top-right |
+| 10 Hz | `right` | bottom-right |
+| 11 Hz | `backward` | top-left |
+| 12 Hz | `stop` | bottom-center |
+| 13 Hz | `idle` | classifier-only target in the current stimulus |
 
-The visible stimulus layout is:
+The visible layout is:
 
 ```text
-backward   turtlesim   left
-forward    stop        right
+backward    turtlesim    left
+forward     stop         right
 ```
 
-## Host Setup
+`forward` and `backward` control `linear.x`. `left` and `right` control
+`angular.z`. With both components active, the turtlesim trajectory is an arc
+or circle with radius:
 
-Install ROS 2 Humble and the required system dependencies using the official
-ROS 2 instructions. Then create a virtual environment that can access the ROS
-2 system packages:
+```text
+R = |linear.x / angular.z| = 1.0 / 1.5 = 0.67
+```
+
+The turtlesim bridge also uses the stimulus gate, command timeout, wall reset,
+and pose feedback as safety mechanisms. It is a demonstrator, not a complete
+closed-loop trajectory tracker.
+
+## 3. Hardware and Reproduction
+
+### 3.1 Hardware and Software Requirements
+
+- Ubuntu 22.04
+- ROS 2 Humble
+- Python 3.10
+- An eight-channel BLE EEG headband
+- The tested device name: `VIS_BCI_DFED857C`
+- Bluetooth support on the host computer
+- A display capable of presenting the 8-13 Hz PsychoPy stimuli
+- A Linux `liblsl.so` installation for the LSL bridge
+- `turtlesim` and a working ROS 2 graphical session
+
+The project is intended for a simulation or unloaded-robot setup. A real
+wheelchair requires an independent hardware emergency stop and an additional
+validated safety controller.
+
+### 3.2 Install Dependencies
 
 ```bash
-cd /path/to/eeg
+git clone https://github.com/Yongying-Zhu/SSVEP_EEG_FBCCA_WCHAIR.git
+cd SSVEP_EEG_FBCCA_WCHAIR
+
+source /opt/ros/humble/setup.bash
 /usr/bin/python3 -m venv --system-site-packages .venv
 source .venv/bin/activate
-python -m pip install -U pip
+python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
-The BLE/LSL stack also requires a Linux `liblsl.so` installation. A Windows
-`liblsl64.dll` cannot be used directly on Ubuntu.
+Install PsychoPy separately if it is not already available in the virtual
+environment. Ensure that the Linux LSL runtime is installed before starting
+the BLE pipeline.
 
-## Build
+### 3.3 Build the ROS 2 Workspace
 
 ```bash
 source /opt/ros/humble/setup.bash
@@ -137,133 +306,104 @@ colcon build --symlink-install
 source install/setup.bash
 ```
 
-Run the package tests:
+Optional tests:
 
 ```bash
 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 colcon test --packages-select eeg_bci
 colcon test-result --verbose
 ```
 
-## Run The Full Demo
+### 3.4 Start the Complete Demonstration
 
-Make sure the headband is powered on and is not connected by another process:
+Power on the EEG headband and make sure no other process is connected to it.
+Then run:
 
 ```bash
-cd /path/to/eeg
-chmod +x start_eeg_turtlesim.sh
+source /opt/ros/humble/setup.bash
+source .venv/bin/activate
+source install/setup.bash
 ./start_eeg_turtlesim.sh
 ```
 
-The script starts:
+The launcher starts the BLE receiver, LSL bridge, FBCCA classifier, turtlesim,
+motion bridge, and PsychoPy stimulus. The classifier parameters are loaded
+from `src/eeg_bci/config/eeg.yaml`; the current baseline explicitly disables
+the trained-model path.
 
-1. BLE-to-LSL acquisition;
-2. LSL-to-ROS 2 conversion;
-3. the SSVEP classifier;
-4. turtlesim and the motion bridge;
-5. the PsychoPy stimulation window.
-
-Press `Ctrl+C` in the launcher terminal to stop the complete process group.
-Runtime logs are written to `logs/` locally and are not committed.
-
-To start the backend without the stimulation window:
+To run the backend without the visual stimulus:
 
 ```bash
 ./start_eeg_turtlesim.sh --no-stimulus
 ```
 
-Without the active stimulus gate, the turtlesim bridge publishes zero velocity.
+The turtlesim bridge should publish zero velocity when the stimulus gate is
+inactive. Press `Ctrl+C` in the launcher terminal to stop the process group.
+Runtime logs are written to `logs/` and are not part of the dataset.
 
-## Run Components Separately
-
-Start the BLE receiver:
-
-```bash
-source /opt/ros/humble/setup.bash
-source .venv/bin/activate
-ros2 run eeg_bci ble_to_lsl \
-  --device-name VIS_BCI_DFED857C \
-  --sample-rate 250
-```
-
-Start the LSL bridge and classifier in separate terminals:
-
-```bash
-source /opt/ros/humble/setup.bash
-source install/setup.bash
-ros2 run eeg_bci lsl_to_ros2
-ros2 run eeg_bci ssvep_classifier \
-  --ros-args --params-file src/eeg_bci/config/eeg.yaml
-```
-
-Start turtlesim and the safe motion bridge:
-
-```bash
-ros2 launch eeg_bci turtlesim_ssvep.launch.py
-```
-
-Useful topics:
+Useful monitoring commands:
 
 ```bash
 ros2 topic echo /eeg/quality
 ros2 topic echo /ssvep/command
+ros2 topic echo /turtle1/cmd_vel
 ros2 topic echo /turtle1/pose
 ```
 
-## Motion Behavior
+### 3.5 Record a Trial
 
-The motion controller maintains independent linear and angular components.
-`forward/backward` set the linear component and `left/right` set the angular
-component. When both are active, the turtle follows a circular trajectory:
-
-```text
-R = |linear.x / angular.z| = 1.0 / 1.5 = 0.67
-```
-
-During a transition, an existing forward/backward component is retained in
-state so that a later confirmed turn can form an arc. Uncertain classifier
-results temporarily suppress output but do not destroy that linear state.
-When an arc is active, a confirmed `stop` clears both components. Stimulus
-shutdown, `idle`, wall protection, and command timeout remain hard-stop paths.
-
-The turtlesim bridge also consumes `/turtle1/pose` for boundary detection and
-automatic reset. It does not yet perform full pose-error trajectory tracking.
-
-## Offline Rosbag Analysis
-
-The included rosbag recordings can be analyzed without the headset:
+Record the data and control topics needed for later analysis:
 
 ```bash
-source /opt/ros/humble/setup.bash
-source install/setup.bash
+ros2 bag record -o experiments/forward_01 \
+  /eeg/frame \
+  /eeg/quality \
+  /ssvep/command \
+  /turtle1/cmd_vel \
+  /turtle1/pose \
+  /ssvep/stimulus_active
+```
+
+The repository dataset is stored under `eeg_robag/`. Each rosbag directory
+contains its SQLite database and `metadata.yaml`.
+
+### 3.6 Replay and Analyze a Rosbag
+
+Replay only EEG frames into a running classifier:
+
+```bash
+ros2 bag play eeg_robag/forward_01 \
+  --topics /eeg/frame \
+  --rate 1.0
+```
+
+For a single bag timeline report:
+
+```bash
+ros2 run eeg_bci analyze_command_timeline \
+  --bag experiments/forward/single_forward_02
+```
+
+For the offline FBCCA analyzer, `--input-root` should contain rosbag
+directories directly below the selected root:
+
+```bash
 ros2 run eeg_bci analyze_rosbags \
-  --output-dir /tmp/eeg_analysis
+  --input-root /path/to/flat_rosbags \
+  --output-dir /tmp/eeg_analysis \
+  --no-train
 ```
 
-The analyzer reports FBCCA scores, class predictions, valid-command rate, and
-the trained logistic-regression model metrics. The trained model used by the
-online classifier is packaged at:
+The analyzer writes per-window CSV files and aggregate summaries in the
+selected output directory.
 
-```text
-src/eeg_bci/eeg_bci/models/ssvep_classifier_model.joblib
-```
+## Safety and Limitations
 
-## Model Configuration
-
-The online classifier uses a six-command SSVEP configuration plus an `unknown`
-model class. Its main settings are in:
-
-```text
-src/eeg_bci/config/eeg.yaml
-```
-
-The model path is package-relative by default and can be overridden with the
-ROS parameter `model_path` when testing another trained artifact.
-
-## Safety Notes
-
-- Do not run multiple BLE receivers against the same headband.
-- Do not connect more than one process to the same LSL stream if it changes
-  the expected timing or sample ownership.
-- Keep the stimulation window running while using the turtlesim bridge.
-- Verify `/ssvep/command` before allowing motion.
-- Test all motion changes in turtlesim before connecting a physical robot.
+- Raw FBCCA always selects one of its reference frequencies, including when
+  the user is not looking at a target.
+- Closed eyes and free view can therefore produce false command candidates.
+- Confidence thresholds and consecutive confirmation reduce accidental output
+  but do not provide a formal safety guarantee.
+- The current feedback loop is a turtlesim demonstration with a pose mirror
+  and wall reset. It is not a validated wheelchair control system.
+- Keep the screen, EEG device, ROS graph, and motion bridge under direct human
+  supervision during experiments.
