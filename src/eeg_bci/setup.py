@@ -33,5 +33,7 @@ setup(
         "scripts/ssvep_to_turtlesim",
         "scripts/ssvep_to_cmd_vel",
         "scripts/analyze_rosbags",
+        "scripts/analyze_eeg_fft",
+        "scripts/analyze_command_timeline",
     ],
 )

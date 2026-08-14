@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -eo pipefail
+
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+PACKAGE_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
+WORKSPACE_ROOT="$(cd -- "${PACKAGE_ROOT}/../.." && pwd)"
+
+export PYTHONPATH="${PACKAGE_ROOT}:${WORKSPACE_ROOT}/build/eeg_bci:${WORKSPACE_ROOT}/install/lib/python3.10/site-packages:${PYTHONPATH:-}"
+
+# ROS Humble setup scripts reference optional variables while nounset is active.
+export AMENT_TRACE_SETUP_FILES="${AMENT_TRACE_SETUP_FILES:-}"
+if [ -f "/opt/ros/humble/setup.bash" ]; then
+  source "/opt/ros/humble/setup.bash"
+fi
+if [ -f "${WORKSPACE_ROOT}/install/setup.bash" ]; then
+  source "${WORKSPACE_ROOT}/install/setup.bash"
+fi
+
+export MPLCONFIGDIR="${MPLCONFIGDIR:-/tmp/eeg_bci_matplotlib}"
+mkdir -p "${MPLCONFIGDIR}"
+
+PYTHON_BIN="${WORKSPACE_ROOT}/.venv/bin/python"
+if [ ! -x "${PYTHON_BIN}" ]; then
+  PYTHON_BIN="$(command -v python3)"
+fi
+
+exec "${PYTHON_BIN}" -m eeg_bci.fft_visualizer "$@"

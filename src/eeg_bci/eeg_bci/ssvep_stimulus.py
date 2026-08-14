@@ -53,6 +53,13 @@ class TurtlePoseState:
         self.theta = 0.0
         self.received = False
         self.history: deque[tuple[float, float]] = deque(maxlen=120)
+        self.normalized_scores = [0.0] * 6
+        self.fbcca_command = ""
+        self.output_command = ""
+        self.output_valid = False
+        self.stimulus_enabled = {
+            command: True for command in COMMAND_FREQUENCIES
+        }
 
     def update(self, x: float, y: float, theta: float) -> None:
         with self._lock:
@@ -66,18 +73,56 @@ class TurtlePoseState:
         with self._lock:
             return self.x, self.y, self.theta, self.received, list(self.history)
 
+    def command_snapshot(self) -> tuple[list[float], str, str, bool]:
+        with self._lock:
+            return (
+                list(self.normalized_scores),
+                self.fbcca_command,
+                self.output_command,
+                self.output_valid,
+            )
+
+    def update_command(self, message) -> None:
+        with self._lock:
+            self.normalized_scores = [
+                float(value) for value in message.normalized_scores
+            ]
+            self.fbcca_command = str(message.fbcca_command)
+            self.output_command = str(message.command)
+            self.output_valid = bool(message.valid)
+
+    def set_stimulus_enabled(self, command: str, enabled: bool) -> None:
+        with self._lock:
+            if command in self.stimulus_enabled:
+                self.stimulus_enabled[command] = bool(enabled)
+
+    def stimulus_snapshot(self) -> dict[str, bool]:
+        with self._lock:
+            return dict(self.stimulus_enabled)
+
+    def any_stimulus_enabled(self) -> bool:
+        with self._lock:
+            return any(self.stimulus_enabled.values())
+
 
 class TurtlePoseNode:
     """Optional ROS 2 subscriber; the screen remains usable without turtlesim."""
 
     def __init__(
-        self, state: TurtlePoseState, rclpy_module, node_class, pose_type, bool_type
+        self,
+        state: TurtlePoseState,
+        rclpy_module,
+        node_class,
+        pose_type,
+        bool_type,
+        command_type,
     ) -> None:
         self._state = state
         self._rclpy = rclpy_module
         self._bool_type = bool_type
         self.node = node_class("ssvep_stimulus_pose")
         self.node.create_subscription(pose_type, "/turtle1/pose", self._on_pose, 10)
+        self.node.create_subscription(command_type, "/ssvep/command", state.update_command, 10)
         self._stimulus_publisher = self.node.create_publisher(
             bool_type, "/ssvep/stimulus_active", 10
         )
@@ -88,7 +133,7 @@ class TurtlePoseNode:
 
     def _publish_active(self) -> None:
         message = self._bool_type()
-        message.data = True
+        message.data = self._state.any_stimulus_enabled()
         self._stimulus_publisher.publish(message)
 
     def start(self) -> threading.Thread:
@@ -119,9 +164,10 @@ def start_pose_subscription(state: TurtlePoseState):
         from rclpy.node import Node
         from std_msgs.msg import Bool
         from turtlesim.msg import Pose
+        from eeg_interfaces.msg import SSVEPCommand
 
         rclpy.init()
-        subscriber = TurtlePoseNode(state, rclpy, Node, Pose, Bool)
+        subscriber = TurtlePoseNode(state, rclpy, Node, Pose, Bool, SSVEPCommand)
         return rclpy, subscriber, subscriber.start()
     except Exception:
         return None, None, None
@@ -137,6 +183,8 @@ def draw_turtle_view(
     turtle_heading,
     turtle_path,
     grid_lines,
+    fbcca_scores_label,
+    output_command_label,
     state: TurtlePoseState,
 ) -> None:
     """Draw a compact pose-driven turtlesim mirror inside the top-center cell."""
@@ -175,10 +223,41 @@ def draw_turtle_view(
     )
     coordinate_label.draw()
 
+    normalized_scores, fbcca_command, output_command, output_valid = state.command_snapshot()
+    command_score_pairs = [
+        ("forward", normalized_scores[0]),
+        ("left", normalized_scores[1]),
+        ("right", normalized_scores[2]),
+        ("backward", normalized_scores[3]),
+        ("stop", normalized_scores[4]),
+        ("idle", normalized_scores[5]),
+    ]
+    score_lines = [
+        "  ".join(f"{command}:{score:.2f}" for command, score in command_score_pairs[:3]),
+        "  ".join(f"{command}:{score:.2f}" for command, score in command_score_pairs[3:]),
+    ]
+    fbcca_scores_label.text = "\n".join(score_lines)
+    fbcca_scores_label.draw()
+    output_state = output_command if output_valid else f"{output_command or 'stop'}*"
+    output_command_label.text = f"FBCCA: {fbcca_command or '--'} | OUT: {output_state}"
+    output_command_label.draw()
+
 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--duration", type=float, default=0.0, help="0 means run until ESC")
+    parser.add_argument(
+        "--mode",
+        choices=("single", "all"),
+        default="all",
+        help="enable only the selected target or enable all command blocks",
+    )
+    parser.add_argument(
+        "--target",
+        choices=tuple(COMMAND_FREQUENCIES),
+        default=None,
+        help="target command for single-stimulus mode",
+    )
     parser.add_argument(
         "--frequencies",
         nargs=5,
@@ -194,8 +273,20 @@ def main() -> None:
         raise SystemExit("Install PsychoPy before running ssvep_stimulus") from exc
 
     state = TurtlePoseState()
+    if args.mode == "single":
+        if args.target is None:
+            raise SystemExit("--target is required when --mode single is used")
+        for command in state.stimulus_enabled:
+            state.set_stimulus_enabled(command, command == args.target)
+    else:
+        for command in state.stimulus_enabled:
+            state.set_stimulus_enabled(command, True)
+
     rclpy_module, pose_subscriber, pose_thread = start_pose_subscription(state)
     win = visual.Window(fullscr=True, color="black", units="norm", allowGUI=False)
+    # Keep the PsychoPy window borderless/fullscreen while explicitly showing
+    # the pointer so the manual stimulus switch can be used.
+    win.mouseVisible = True
 
     frequencies = list(args.frequencies)
     if len(frequencies) != len(COMMAND_LAYOUT):
@@ -289,14 +380,63 @@ def main() -> None:
         lineColor="yellow",
         lineWidth=3,
     )
+    fbcca_scores_label = visual.TextStim(
+        win,
+        text="forward:0.00  left:0.00  right:0.00\nbackward:0.00  stop:0.00  idle:0.00",
+        pos=(TURTLE_VIEW_POSITION[0], TURTLE_VIEW_POSITION[1] - 0.255),
+        height=0.022,
+        color="lightgray",
+        alignText="center",
+        wrapWidth=0.44,
+    )
+    output_command_label = visual.TextStim(
+        win,
+        text="FBCCA: -- | OUT: --",
+        pos=(TURTLE_VIEW_POSITION[0], TURTLE_VIEW_POSITION[1] - 0.345),
+        height=0.022,
+        color="yellow",
+        alignText="center",
+        wrapWidth=0.44,
+    )
+    stimulus_toggle_rects = []
+    stimulus_toggle_labels = []
+    for command, frequency, position in targets:
+        toggle_position = (position[0], position[1] - 0.27)
+        stimulus_toggle_rects.append(
+            visual.Rect(
+                win,
+                width=0.42,
+                height=0.075,
+                pos=toggle_position,
+                fillColor="darkgreen",
+                lineColor="white",
+                lineWidth=2,
+            )
+        )
+        stimulus_toggle_labels.append(
+            visual.TextStim(
+                win,
+                text=f"{command} {frequency:g} Hz: ON",
+                pos=toggle_position,
+                height=0.026,
+                color="white",
+                alignText="center",
+            )
+        )
+    mouse = event.Mouse(visible=True, win=win)
+    mouse_was_pressed = bool(mouse.getPressed()[0])
 
     clock = core.Clock()
     try:
         while args.duration <= 0.0 or clock.getTime() < args.duration:
             now = clock.getTime()
-            for rect, text, (_, frequency, _) in zip(rects, texts, targets):
-                on = np.sin(2.0 * np.pi * frequency * now) >= 0.0
-                rect.fillColor = "white" if on else "black"
+            stimulus_enabled = state.stimulus_snapshot()
+            for rect, text, (command, frequency, _) in zip(rects, texts, targets):
+                if stimulus_enabled[command]:
+                    on = np.sin(2.0 * np.pi * frequency * now) >= 0.0
+                    rect.fillColor = "white" if on else "black"
+                else:
+                    rect.fillColor = "black"
                 rect.draw()
                 text.draw()
             draw_turtle_view(
@@ -309,10 +449,37 @@ def main() -> None:
                 turtle_heading,
                 turtle_path,
                 grid_lines,
+                fbcca_scores_label,
+                output_command_label,
                 state,
             )
+            for (command, frequency, _), toggle_rect, toggle_label in zip(
+                targets, stimulus_toggle_rects, stimulus_toggle_labels
+            ):
+                enabled = stimulus_enabled[command]
+                toggle_rect.fillColor = "darkgreen" if enabled else "darkred"
+                toggle_label.text = (
+                    f"{command} {frequency:g} Hz: ON"
+                    if enabled
+                    else f"{command} {frequency:g} Hz: OFF"
+                )
+                toggle_rect.draw()
+                toggle_label.draw()
             win.flip()
-            if "escape" in event.getKeys():
+            mouse_pressed = bool(mouse.getPressed()[0])
+            mouse_position = mouse.getPos()
+            if mouse_pressed and not mouse_was_pressed:
+                for (command, _, _), toggle_rect in zip(targets, stimulus_toggle_rects):
+                    if toggle_rect.contains(mouse_position):
+                        state.set_stimulus_enabled(command, not stimulus_enabled[command])
+                        break
+            mouse_was_pressed = mouse_pressed
+            keys = event.getKeys(keyList=["escape", "t"])
+            if "t" in keys:
+                current = state.stimulus_snapshot()
+                for command in current:
+                    state.set_stimulus_enabled(command, not current[command])
+            if "escape" in keys:
                 break
     finally:
         win.close()
