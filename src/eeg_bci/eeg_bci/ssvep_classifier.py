@@ -68,6 +68,12 @@ class SsvepClassifierNode(Node):
         self.minimum_confidence = float(
             self.declare_parameter("minimum_confidence", 0.1).value
         )
+        self.use_score_margin = bool(
+            self.declare_parameter("use_score_margin", False).value
+        )
+        self.score_margin_threshold = float(
+            self.declare_parameter("score_margin_threshold", 0.0).value
+        )
         self.required_consecutive = int(
             self.declare_parameter("required_consecutive_results", 2).value
         )
@@ -98,6 +104,18 @@ class SsvepClassifierNode(Node):
         )
         if len(self.targets) != len(self.commands):
             raise ValueError("targets and commands must have equal length")
+        self._minimum_confidences = {
+            command: float(
+                self.declare_parameter(
+                    f"minimum_confidence_{command}", self.minimum_confidence
+                ).value
+            )
+            for command in self.commands
+        }
+        self._minimum_confidences = {
+            command: float(np.clip(threshold, 0.0, 1.0))
+            for command, threshold in self._minimum_confidences.items()
+        }
         self._model_reject_probabilities = {
             command: float(
                 self.declare_parameter(
@@ -142,6 +160,9 @@ class SsvepClassifierNode(Node):
         self.get_logger().info(
             f"SSVEP classifier ready: targets={list(self.targets)} "
             f"window={self.window_seconds:.1f}s min_confidence={self.minimum_confidence:.2f} "
+            f"use_score_margin={self.use_score_margin} "
+            f"score_margin_threshold={self.score_margin_threshold:.4f} "
+            f"per_command_confidence={self._minimum_confidences} "
             f"trained_model={self.use_trained_model}"
         )
         self.get_logger().info(
@@ -179,7 +200,16 @@ class SsvepClassifierNode(Node):
                 f"invalid_fraction={msg.invalid_fraction:.4f}"
             )
 
-    def _publish(self, command: str, class_id: int, confidence: float, valid: bool, reason: str):
+    def _publish(
+        self,
+        command: str,
+        class_id: int,
+        confidence: float,
+        valid: bool,
+        reason: str,
+        normalized_scores: np.ndarray | None = None,
+        fbcca_command: str = "",
+    ):
         msg = SSVEPCommand()
         msg.header.stamp = self.get_clock().now().to_msg()
         msg.header.frame_id = "ssvep"
@@ -188,6 +218,14 @@ class SsvepClassifierNode(Node):
         msg.confidence = float(np.clip(confidence, 0.0, 1.0))
         msg.valid = bool(valid)
         msg.reason = reason
+        if normalized_scores is None:
+            normalized = np.zeros(6, dtype=np.float32)
+        else:
+            normalized = np.asarray(normalized_scores, dtype=np.float32).reshape(-1)
+            if normalized.size != 6:
+                normalized = np.zeros(6, dtype=np.float32)
+        msg.normalized_scores = normalized.tolist()
+        msg.fbcca_command = str(fbcca_command)
         self.command_pub.publish(msg)
         self._sequence += 1
         if self.debug:
@@ -275,7 +313,12 @@ class SsvepClassifierNode(Node):
             configured = self._model_reject_probability
         return float(np.clip(configured, 0.0, 1.0))
 
-    def _classify_with_trained_model(self, scores: np.ndarray) -> None:
+    def _classify_with_trained_model(
+        self,
+        scores: np.ndarray,
+        normalized_scores: np.ndarray,
+        fbcca_command: str,
+    ) -> None:
         features = self._model_features(scores).reshape(1, -1)
         probabilities = np.asarray(self._trained_model.predict_proba(features)[0])
         if probabilities.size != len(self._model_classes):
@@ -301,13 +344,17 @@ class SsvepClassifierNode(Node):
         if predicted_label == "unknown":
             self._last_prediction = None
             self._prediction_streak = 0
-            self._publish("stop", 0, unknown_probability, False, "model_unknown")
+            self._publish(
+                "stop", 0, unknown_probability, False, "model_unknown",
+                normalized_scores, fbcca_command,
+            )
             return
         if model_confidence < reject_probability:
             self._last_prediction = None
             self._prediction_streak = 0
             self._publish(
-                "stop", 0, model_confidence, False, "model_low_confidence"
+                "stop", 0, model_confidence, False, "model_low_confidence",
+                normalized_scores, fbcca_command,
             )
             return
         if predicted_label not in self.commands:
@@ -321,11 +368,13 @@ class SsvepClassifierNode(Node):
             self._prediction_streak = 1
         if self._prediction_streak < self.required_consecutive:
             self._publish(
-                "stop", class_id, model_confidence, False, "awaiting_confirmation"
+                "stop", class_id, model_confidence, False, "awaiting_confirmation",
+                normalized_scores, fbcca_command,
             )
             return
         self._publish(
-            predicted_label, class_id, model_confidence, True, "trained_model"
+            predicted_label, class_id, model_confidence, True, "trained_model",
+            normalized_scores, fbcca_command,
         )
 
     def _classify(self) -> None:
@@ -371,7 +420,11 @@ class SsvepClassifierNode(Node):
         order = np.argsort(scores)[::-1]
         best = int(order[0])
         total = float(np.sum(np.maximum(scores, 0.0)))
+        normalized_scores = np.maximum(scores, 0.0) / (total + 1e-12)
+        fbcca_command = self.commands[best]
         confidence = float(max(scores[best], 0.0) / (total + 1e-12))
+        score_margin = float(scores[best] - scores[order[1]])
+        confidence_threshold = self._minimum_confidences[fbcca_command]
         if self.debug:
             score_text = ", ".join(
                 f"{self.targets[i]:g}Hz={scores[i]:.5f}" for i in range(len(scores))
@@ -379,11 +432,24 @@ class SsvepClassifierNode(Node):
             self.get_logger().info(
                 f"FBCCA scores: {score_text}; raw_best={self.targets[best]:g}Hz "
                 f"raw_command={self.commands[best]} raw_confidence={confidence:.4f} "
+                f"score_margin={score_margin:.4f} "
+                f"margin_threshold={self.score_margin_threshold:.4f} "
+                f"threshold={confidence_threshold:.4f} "
                 f"streak_before={self._prediction_streak}"
             )
+        if self.use_score_margin and score_margin < self.score_margin_threshold:
+            self._last_prediction = None
+            self._prediction_streak = 0
+            self._publish(
+                "stop", best + 1, confidence, False, "low_score_margin",
+                normalized_scores, fbcca_command,
+            )
+            return
         if self.use_trained_model:
             try:
-                self._classify_with_trained_model(scores)
+                self._classify_with_trained_model(
+                    scores, normalized_scores, fbcca_command
+                )
             except Exception as exc:
                 self.get_logger().warning(f"Trained model classification failed: {exc}")
                 self._last_prediction = None
@@ -396,14 +462,23 @@ class SsvepClassifierNode(Node):
             self._last_prediction = best
             self._prediction_streak = 1
 
-        if confidence < self.minimum_confidence:
-            self._publish("stop", best + 1, confidence, False, "low_confidence")
+        if confidence < confidence_threshold:
+            self._publish(
+                "stop", best + 1, confidence, False, "low_confidence",
+                normalized_scores, fbcca_command,
+            )
             return
         if self._prediction_streak < self.required_consecutive:
-            self._publish("stop", best + 1, confidence, False, "awaiting_confirmation")
+            self._publish(
+                "stop", best + 1, confidence, False, "awaiting_confirmation",
+                normalized_scores, fbcca_command,
+            )
             return
 
-        self._publish(self.commands[best], best + 1, confidence, True, "fbcca")
+        self._publish(
+            self.commands[best], best + 1, confidence, True, "fbcca",
+            normalized_scores, fbcca_command,
+        )
 
     def _reference_signals(self, fs: int, length: int) -> np.ndarray:
         key = (int(fs), int(length))

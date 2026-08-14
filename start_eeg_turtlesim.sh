@@ -6,6 +6,7 @@ set -Ee -o pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE_ROOT="${EEG_WORKSPACE_ROOT:-${SCRIPT_DIR}}"
 LOG_DIR="${WORKSPACE_ROOT}/logs"
+CLASSIFIER_PARAMS_FILE="${WORKSPACE_ROOT}/src/eeg_bci/config/eeg.yaml"
 DEVICE_NAME="VIS_BCI_DFED857C"
 SAMPLE_RATE="250"
 PIDS=()
@@ -33,6 +34,11 @@ fi
 if [[ ! -x "${WORKSPACE_ROOT}/.venv/bin/python" ]]; then
   echo "Missing virtual environment: ${WORKSPACE_ROOT}/.venv" >&2
   echo "Create it with: /usr/bin/python3 -m venv --system-site-packages ${WORKSPACE_ROOT}/.venv" >&2
+  exit 1
+fi
+
+if [[ ! -f "${CLASSIFIER_PARAMS_FILE}" ]]; then
+  echo "Missing classifier parameter file: ${CLASSIFIER_PARAMS_FILE}" >&2
   exit 1
 fi
 
@@ -147,7 +153,8 @@ start_background "lsl_to_ros2" \
 start_background "ssvep_classifier" \
   ros2 run eeg_bci ssvep_classifier \
     --ros-args \
-    --params-file "${WORKSPACE_ROOT}/src/eeg_bci/config/eeg.yaml"
+    --params-file "${CLASSIFIER_PARAMS_FILE}" \
+    -p use_trained_model:=false
 
 echo
 echo "Backend is running. Logs are in ${LOG_DIR}"

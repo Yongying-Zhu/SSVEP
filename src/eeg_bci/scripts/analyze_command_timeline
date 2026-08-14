@@ -1,0 +1,6 @@
+#!/usr/bin/env python3
+from eeg_bci.analyze_command_timeline import main
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
