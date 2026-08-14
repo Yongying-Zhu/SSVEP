@@ -133,7 +133,68 @@ classification cycle. The `4.8 s` figure is a useful conservative estimate,
 not a strict maximum; this measured trial demonstrates why real transitions
 can exceed it.
 
-### 1.3 Raw FBCCA Command Accuracy
+### 1.3 Personalized Confidence Thresholds
+
+The current confidence is a normalized FBCCA score, not a calibrated
+probability:
+
+```text
+confidence(c) = max(score(c), 0) / sum(max(score(k), 0))
+```
+
+For each window, FBCCA first selects the command with the largest score. The
+classifier then looks up the threshold for that selected command. A command is
+eligible only when its confidence reaches that command's threshold and the
+same candidate is confirmed twice consecutively. The per-command values are
+configured in [`eeg.yaml`](src/eeg_bci/config/eeg.yaml); the lookup and
+confidence calculation are implemented in
+[`ssvep_classifier.py`](src/eeg_bci/eeg_bci/ssvep_classifier.py).
+
+The thresholds were set by retrospective calibration on the recorded EEG
+windows, using this procedure:
+
+1. Separate windows by the command selected as the raw FBCCA top candidate.
+2. Compare the confidence distribution of correct target windows with the
+   confidence distribution from wrong-target and no-target recordings.
+3. Choose a threshold low enough to preserve usable correct candidates, but
+   high enough to reject weak candidates. Verify the result with final
+   `valid=true` output and motion timing.
+
+This is a deliberately conservative operating-point choice, not a learned
+classifier parameter. The following audit uses the available offline window
+analysis. `Correct p10` is the 10th percentile of confidence among windows
+whose raw candidate equals the expected command. `Correct pass` is the share
+of those correct windows above the configured threshold. `Unknown pass` is the
+share of no-target windows that selected that candidate and also exceeded the
+threshold. It is a candidate-level diagnostic; it does not include the final
+two-result confirmation.
+
+| Candidate | Threshold | Correct n | Correct p10 | Correct pass | Unknown n | Unknown pass |
+|---|---:|---:|---:|---:|---:|---:|
+| `forward` | 0.23 | 107 | 0.227 | 87.9% | 459 | 61.4% |
+| `backward` | 0.22 | 132 | 0.247 | 97.0% | 258 | 77.9% |
+| `left` | 0.24 | 118 | 0.222 | 78.0% | 275 | 34.5% |
+| `right` | 0.25 | 106 | 0.226 | 75.5% | 126 | 32.5% |
+| `stop` | 0.20 | 116 | 0.237 | 100.0% | 131 | 90.1% |
+| `idle` | 0.24 | 93 | 0.221 | 81.7% | 55 | 21.8% |
+
+The table explains why the thresholds are intentionally different. `right`
+and `left` use higher thresholds because their non-target candidate scores
+overlap less with their correct scores, so some weak candidates can be
+rejected without losing all correct windows. `backward` uses a lower value to
+avoid suppressing its relatively weak but valid responses. `stop` uses the
+lowest value to preserve the safety stop action, accepting that confidence
+alone is not a reliable unknown detector. The high `Unknown pass` values for
+`forward`, `backward`, and `stop` are evidence that confidence must be combined
+with consecutive confirmation and, for a stronger rejection design, an
+additional no-target criterion.
+
+In the current baseline, `use_trained_model: false` and
+`use_score_margin: false`, so these per-command confidence thresholds are the
+active threshold mechanism. `model_reject_probability_*` and
+`score_margin_threshold` do not affect this baseline path.
+
+### 1.4 Raw FBCCA Command Accuracy
 
 The following table measures the raw FBCCA top-1 result before confidence
 thresholding, consecutive confirmation, or command publication:
@@ -160,7 +221,7 @@ classification. For example, all forward trials had forward as the majority
 prediction even though the forward window accuracy was 94.81%. A few wrong
 windows can therefore coexist with 100% majority-trial accuracy.
 
-### 1.4 Closed Eyes and Free View Without a Target
+### 1.5 Closed Eyes and Free View Without a Target
 
 These recordings have no expected visual target. Plain FBCCA must still choose
 one of its reference frequencies, so it has no native unknown or rejection
