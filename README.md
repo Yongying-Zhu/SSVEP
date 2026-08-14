@@ -78,7 +78,62 @@ Correct FBCCA -> cmd_vel
 Repeated confidence rejection, changing candidates, poor signal quality, or a
 failed confirmation can extend the transition time beyond these ideal ranges.
 
-### 1.2 Raw FBCCA Command Accuracy
+### 1.2 Example of a Transition Longer Than 4.8 Seconds
+
+The following is an actual `single_backward_01` trial selected from the
+recorded timing tables. The expected command was `backward`, but the first
+candidate was `right`. Times are relative to the first recorded
+`/eeg/frame`; the interval column is measured from the preceding event.
+
+| Processing event | Time from first EEG | Interval | Observed result | Interpretation |
+|---|---:|---:|---|---|
+| First `/eeg/frame` | 0.000 s | - | `sequence=0`, 250 Hz | Start of measurement |
+| 4-second window ready | 4.066 s | 4.066 s | 1000 samples cached | Initial window is available |
+| First FBCCA candidate | 4.140 s | 0.073 s | `right`, `valid=false`, `low_confidence`, 0.236 | Wrong candidate rejected |
+| Wrong command accepted | 4.545 s | 0.405 s | `right`, `valid=true`, 0.244 | An incorrect command was temporarily published |
+| Expected candidate appears | 4.935 s | 0.390 s | `backward`, `valid=false`, `low_confidence`, 0.209 | Correct candidate is still below threshold |
+| Repeated backward candidate | 5.341 s | 0.407 s | `backward`, `valid=false`, `low_confidence`, 0.219 | Confidence still insufficient |
+| Candidate changes | 5.736 s | 0.394 s | `right`, `valid=false`, `low_confidence`, 0.221 | Candidate instability interrupts confirmation |
+| Candidate changes | 6.134 s | 0.398 s | `left`, `valid=false`, `awaiting_confirmation`, 0.271 | New candidate starts a new streak |
+| Candidate rejected | 6.541 s | 0.407 s | `left`, `valid=false`, `low_confidence`, 0.222 | Confidence still insufficient |
+| Backward candidate returns | 6.935 s | 0.394 s | `backward`, `valid=false`, `low_confidence`, 0.220 | Correct candidate returns but is rejected |
+| Repeated backward candidate | 7.335 s | 0.401 s | `backward`, `valid=false`, `low_confidence`, 0.217 | One more classification cycle is needed |
+| Valid backward output | 7.736 s | 0.400 s | `backward`, `valid=true`, 0.255 | Confidence and confirmation pass |
+| `/turtle1/cmd_vel` | 7.743 s | 0.007 s | `linear.x=-1.000` | Motion command is published |
+
+This trial took **7.743 s from the first EEG frame to the matching
+`cmd_vel`**, which is above the 4.8-second conservative estimate. The delay is
+not caused by the `cmd_vel` bridge: the valid output to `cmd_vel` interval was
+only `0.007 s`. The delay accumulated earlier in the classifier:
+
+```text
+first EEG -> 4-second window ready       = 4.066 s
+window ready -> first FBCCA candidate   = 0.073 s
+first candidate -> valid backward       = 3.596 s
+valid backward -> cmd_vel                = 0.007 s
+total first EEG -> cmd_vel               = 7.743 s
+```
+
+The observed sequence shows three mechanisms that extend the response time:
+
+1. The first candidate was `right`, so it did not represent the expected
+   `backward` command.
+2. The expected `backward` candidate appeared several times but its confidence
+   stayed below the configured threshold, producing `valid=false` with
+   `low_confidence`.
+3. The candidate changed to `right` and `left` during the transition. A change
+   of candidate starts a new consecutive-confirmation streak, so the system
+   cannot immediately accept the next `backward` result.
+
+In the classifier implementation, a low-confidence result returns before
+publishing `valid=true`, while a candidate change resets the streak to one
+before the two-result confirmation requirement is checked. Therefore, the
+`0.4 s` update period is the cost of each additional rejected or unstable
+classification cycle. The `4.8 s` figure is a useful conservative estimate,
+not a strict maximum; this measured trial demonstrates why real transitions
+can exceed it.
+
+### 1.3 Raw FBCCA Command Accuracy
 
 The following table measures the raw FBCCA top-1 result before confidence
 thresholding, consecutive confirmation, or command publication:
@@ -105,7 +160,7 @@ classification. For example, all forward trials had forward as the majority
 prediction even though the forward window accuracy was 94.81%. A few wrong
 windows can therefore coexist with 100% majority-trial accuracy.
 
-### 1.3 Closed Eyes and Free View Without a Target
+### 1.4 Closed Eyes and Free View Without a Target
 
 These recordings have no expected visual target. Plain FBCCA must still choose
 one of its reference frequencies, so it has no native unknown or rejection
