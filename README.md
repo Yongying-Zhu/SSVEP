@@ -89,6 +89,23 @@ normal-trial mean. Times are relative to the first recorded `/eeg/frame`.
 | Valid backward | 7.736 s | `backward`, `valid=true` |
 | Matching `cmd_vel` | 7.743 s | `linear.x=-1.000` |
 
+The three switching tables below summarize the ten recordings in
+`rosbag/switch_process/switch_01` through `switch_10`. Each recording uses the
+sequence `forward -> backward -> left -> right -> stop`.
+
+- `Switching`: the transition being measured.
+- `Successful bags`: recordings in which the requested target command was
+  reached, shown as successful recordings / ten recordings.
+- `Time interval`: from the end of the previous command phase to the first
+  valid output of the next target command, corresponding to its actual control
+  start.
+- `Mean`: arithmetic mean of the successful transition times, in seconds.
+- `Median`: middle successful transition time, in seconds.
+- `Variance`: sample variance of the successful transition times, in seconds
+  squared, using denominator `n - 1`.
+- These values describe command switching after the classifier is already
+  running; they do not include the initial 4-second EEG-window loading.
+
 | Switching | Successful bags | Mean | Median | Variance |
 |---|---:|---:|---:|---:|
 | forward -> backward | 9/10 | 4.443 s | 4.129 s | 1.668 |
