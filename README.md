@@ -115,6 +115,15 @@ The current thresholds are configured in
 point from recorded confidence distributions: retain usable correct candidates
 while rejecting weak candidates. They are not learned model parameters.
 
+The operating point was checked experimentally. Lowering the thresholds made
+turtlesim respond more often, but also caused unwanted movement under weak or
+no-target EEG. Raising the thresholds, including a trial with an additional
+rejection filter, improved recognition accuracy but made the controller miss
+valid commands and become noticeably insensitive. The deployed values therefore
+keep command-specific thresholds around the observed confidence center: their
+mean is `(0.23 + 0.22 + 0.24 + 0.25 + 0.20 + 0.24) / 6 = 0.23`. This mean is a
+reference operating point, not a replacement for the per-command values.
+
 Definitions for the calibration table:
 
 - `Threshold`: configured per-command minimum confidence.
