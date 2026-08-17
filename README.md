@@ -15,140 +15,90 @@ canonical correlation analysis (FBCCA).
 
 ## 1. Baseline Results
 
-The results in this section use the original FBCCA path:
+Based on the four `/turtle1/cmd_vel` switching medians, the current turtlesim control frequency is approximately **0.249 Hz**: `(4.556 + 4.282 + 3.388 + 3.853) / 4 = 4.01975 s` per switch, so `1 / 4.01975 = 0.2488 Hz`.
 
-The full timing-statistics report is available in
+| Switching: raw FBCCA majority-confirmation delay | Successful bags | Mean (s) | Median (s) | Variance (s^2) |
+|---|---:|---:|---:|---:|
+| forward -> backward | 9/10 | 4.443 | 4.129 | 1.668 |
+| backward -> left | 10/10 | 4.050 | 4.050 | 1.136 |
+| left -> right | 9/10 | 2.976 | 2.949 | 0.503 |
+| right -> stop | 7/10 | 3.469 | 3.296 | 2.260 |
+
+| Switching: valid `/ssvep/command` output delay | Successful bags | Mean (s) | Median (s) | Variance (s^2) |
+|---|---:|---:|---:|---:|
+| forward -> backward | 7/10 | 4.705 | 4.528 | 1.023 |
+| backward -> left | 8/10 | 4.331 | 4.242 | 0.993 |
+| left -> right | 7/10 | 3.646 | 3.348 | 0.703 |
+| right -> stop | 6/10 | 3.459 | 3.818 | 1.710 |
+
+| Switching: matching `/turtle1/cmd_vel` output delay | Successful bags | Mean (s) | Median (s) | Variance (s^2) |
+|---|---:|---:|---:|---:|
+| forward -> backward | 7/10 | 4.738 | 4.556 | 1.052 |
+| backward -> left | 8/10 | 4.367 | 4.282 | 0.980 |
+| left -> right | 7/10 | 3.686 | 3.388 | 0.689 |
+| right -> stop | 6/10 | 3.492 | 3.853 | 1.711 |
+
+Let `W=4 s` be the sliding-window length, `Delta=0.4 s` the classification
+period, `m=2` the required number of consistent results, `phi` the timer phase,
+and `delta` the bridge publication delay:
+
+```text
+0 <= phi < Delta
+0 <= delta <= 0.1 s
+T_confirmation = (m - 1) * Delta = 0.4 s
+T_switch = T_replace + phi + T_confirmation + delta
+0 <= T_replace <= W
+0.4 s <= T_switch < 4.9 s
+```
+
+`T_replace` is the time for the new command's EEG evidence to make the mixed
+4-second window discriminative. For the `/turtle1/cmd_vel` medians, the
+combined median is:
+
+```text
+T_cmd_vel,median = (4.556 + 4.282 + 3.388 + 3.853) / 4
+                  = 4.01975 s
+```
+
+Using the midpoint timer phase `0.2 s`, the `0.4 s` confirmation interval,
+and an average `0.05 s` bridge delay gives:
+
+```text
+T_replace,median ~= 4.01975 - 0.2 - 0.4 - 0.05
+                 = 3.36975 s
+```
+
+Therefore the measured 3-5 s range is expected: the window replacement term
+is approximately 2.7-3.9 s in the four transitions, and the fixed processing
+terms add approximately 0.6-0.9 s. The theoretical conservative upper bound
+is `4.9 s`.
+
+Definitions for all three tables:
+
+`rosbag/switch_process/switch_01` through `switch_10` are the ten recordings;
+each uses `forward -> backward -> left -> right -> stop`.
+`Successful bags` is successful recordings / ten recordings. The time starts
+when the previous command phase ends and ends at the event named in the table
+header. Thus, the three tables are successive endpoints of the same chain:
+raw FBCCA candidate/confirmation, valid `/ssvep/command`, and matching
+`/turtle1/cmd_vel`. They describe an already running classifier and exclude
+the initial 4-second EEG-window loading.
+
+`Mean` is the arithmetic mean of successful transition times. `Median` is the
+middle successful transition time. `Variance` is the sample variance in
+seconds squared with denominator `n - 1`.
+
+The results in this section use the original FBCCA path with
+`use_score_margin: false` and `use_trained_model: false`. The full
+timing-statistics report is available in
 [`supplementary_resources/timing_statistics.md`](supplementary_resources/timing_statistics.md).
 
-```yaml
-use_score_margin: false
-use_trained_model: false
-```
+### 1.1 Personalized Confidence Thresholds
 
-No score-margin filter or trained model is active in these measurements.
-
-### 1.1 Current Problems
-
-1. **Slow response:** Most outputs take more than 4 s, both at startup and
-   after command switches.
-2. **False movement without a target:** Closed-eyes and free-view trials can
-   produce valid commands, so turtlesim may move unexpectedly.
-3. **Limited generality:** Data was collected from one developer with limited
-   hardware, so current thresholds and other hyperparameters are not yet
-   subject- or device-independent.
-
-### 1.2 Switching Latency
-
-Definitions for the table:
-
-- `Normal trials`: normal trials / total trials. A normal trial has the
-  expected command as the first FBCCA candidate and reaches `valid=true` within
-  `0.8 s` of that correct candidate. This is a trial filter, not a window
-  accuracy measure.
-- `First EEG -> cmd_vel mean`: mean time from the first recorded `/eeg/frame`
-  to the first matching `/turtle1/cmd_vel` across normal trials.
-- `Correct FBCCA -> cmd_vel mean`: mean time from the first correct FBCCA
-  candidate to the matching `/turtle1/cmd_vel`.
-- `Variance`: sample variance in seconds squared, using denominator `n - 1`.
-
-| Command | Normal trials | First EEG -> cmd_vel mean | Variance | Correct FBCCA -> cmd_vel mean | Variance |
-|---|---:|---:|---:|---:|---:|
-| forward | 6/10 | 4.731 s | 0.025132 | 0.456 s | 0.001274 |
-| backward | 4/10 | 4.720 s | 0.054528 | 0.435 s | 0.000739 |
-| left | 4/4 | 4.505 s | 0.023268 | 0.439 s | 0.000307 |
-| right | 4/4 | 4.742 s | 0.049954 | 0.433 s | 0.000683 |
-| stop | 4/4 | 4.665 s | 0.016971 | 0.465 s | 0.000376 |
-
-`update_period=0.4 s` is the interval between classification attempts. A
-normal first output contains approximately:
-
-```text
-4.0 s window fill
-+ 0-0.4 s timer phase
-+ approximately 0.4 s for the second consistent result
-+ approximately 0-0.1 s command publication
-= approximately 4.4-4.9 s
-```
-
-The measured mean is not restricted to multiples of `0.4 s` because each
-trial starts with a different timer phase and message arrival time. The
-`Correct FBCCA -> cmd_vel` mean excludes window filling and mainly measures
-confirmation plus command publication.
-
-#### Long-delay example
-
-This is the recorded `backward_01` trial. It is not included in the
-normal-trial mean. Times are relative to the first recorded `/eeg/frame`.
-
-| Event | Time | Meaning |
-|---|---:|---|
-| First `/eeg/frame` | 0.000 s | Measurement origin |
-| 4-second window ready | 4.066 s | 1000 EEG samples available |
-| First candidate | 4.140 s | `right`, `valid=false`, `low_confidence` |
-| Correct candidate | 4.935 s | `backward`, `valid=false`, `low_confidence` |
-| Valid backward | 7.736 s | `backward`, `valid=true` |
-| Matching `cmd_vel` | 7.743 s | `linear.x=-1.000` |
-
-The three switching tables below summarize the ten recordings in
-`rosbag/switch_process/switch_01` through `switch_10`. Each recording uses the
-sequence `forward -> backward -> left -> right -> stop`.
-
-- `Switching`: the transition being measured.
-- `Successful bags`: recordings in which the requested target command was
-  reached, shown as successful recordings / ten recordings.
-- `Time interval`: from the end of the previous command phase to the first
-  matching `/turtle1/cmd_vel` of the next target command. It includes the raw
-  FBCCA confirmation delay, valid `/ssvep/command` publication, and the bridge
-  delay before the actual control starts.
-- `Mean`: arithmetic mean of the successful transition times, in seconds.
-- `Median`: middle successful transition time, in seconds.
-- `Variance`: sample variance of the successful transition times, in seconds
-  squared, using denominator `n - 1`.
-- These values describe command switching after the classifier is already
-  running; they do not include the initial 4-second EEG-window loading.
-
-| Processing stage | Recorded event | Meaning |
-|---|---|---|
-| Raw FBCCA candidate | Highest FBCCA score is selected | A candidate is produced, but it is not yet a valid command. |
-| FBCCA confirmation delay | `required_consecutive_results=2` consistent candidates | The candidate must pass the consecutive-confirmation rule. |
-| Valid command output | `/ssvep/command` with `valid=true` | The classifier publishes the confirmed command. |
-| Actual control output | Matching `/turtle1/cmd_vel` | `ssvep_to_turtlesim.py` converts the valid command into motion. |
-
-| Switching | Successful bags | Mean | Median | Variance |
-|---|---:|---:|---:|---:|
-| forward -> backward | 9/10 | 4.443 s | 4.129 s | 1.668 |
-| backward -> left | 10/10 | 4.050 s | 4.050 s | 1.136 |
-| left -> right | 9/10 | 2.976 s | 2.949 s | 0.503 |
-| right -> stop | 7/10 | 3.469 s | 3.296 s | 2.260 |
-
-| Switching | Successful bags | Mean | Median | Variance |
-|---|---:|---:|---:|---:|
-| forward -> backward | 7/10 | 4.705 s | 4.528 s | 1.023 |
-| backward -> left | 8/10 | 4.331 s | 4.242 s | 0.993 |
-| left -> right | 7/10 | 3.646 s | 3.348 s | 0.703 |
-| right -> stop | 6/10 | 3.459 s | 3.818 s | 1.710 |
-
-| Switching | Successful bags | Mean | Median | Variance |
-|---|---:|---:|---:|---:|
-| forward -> backward | 7/10 | 4.738 s | 4.556 s | 1.052 |
-| backward -> left | 8/10 | 4.367 s | 4.282 s | 0.980 |
-| left -> right | 7/10 | 3.686 s | 3.388 s | 0.689 |
-| right -> stop | 6/10 | 3.492 s | 3.853 s | 1.711 |
-
-The recorded evidence shows that the first correct candidate was rejected for
-low confidence. The rosbag does not expose every intermediate classifier
-decision, so the remaining 2.801 s cannot be assigned to a specific internal
-decision beyond the recorded threshold/confirmation logic. The measured
-intervals are:
-
-```text
-first EEG -> window ready = 4.066 s
-window ready -> first candidate = 0.074 s
-first candidate -> valid backward = 3.596 s
-valid backward -> cmd_vel = 0.007 s
-```
-
-### 1.3 Personalized Confidence Thresholds
+The recordings under `rosbag/Initialize` contain the initial single-command
+and all-command trials. Their core purpose is to estimate a suitable
+per-command confidence threshold from the recorded FBCCA confidence
+distributions. They are calibration data, not merely replay examples.
 
 For six FBCCA scores `score(k)`, the selected candidate's confidence is:
 
@@ -193,7 +143,7 @@ on consecutive confirmation. `score_margin_threshold` and
 `model_reject_probability_*` are inactive while the two switches above are
 `false`.
 
-### 1.4 Raw FBCCA Command Accuracy
+### 1.2 Raw FBCCA Command Accuracy
 
 Definitions for the table:
 
@@ -218,7 +168,7 @@ Overall raw window accuracy is `1035/1229 = 84.21%`. A 100% majority-trial
 value does not mean every window was correct; it means the expected command was
 the majority candidate in every trial in that group.
 
-### 1.5 No-Target Conditions
+### 1.3 No-Target Conditions
 
 Plain FBCCA always selects one of its six reference frequencies. It has no
 native unknown class at the raw-score stage.
@@ -257,21 +207,6 @@ without a target.
     <td align="center"><strong>Closed eyes</strong><br><img src="supplementary_resources/turtlesim_trimmed_new.gif" width="420" alt="Turtlesim during closed eyes"></td>
   </tr>
 </table>
-
-### 1.6 Proposed Improvements
-
-1. **Tune temporal parameters:** Sweep `window_seconds` and `update_period`
-   under controlled conditions. With more data, select them as hyperparameters
-   using held-out validation.
-2. **Reject no-target activity:** Compare voltage and FBCCA-score distributions
-   for closed-eyes and free-view trials against target trials, then design the
-   lightest rejection filter that reduces false movement without materially
-   increasing latency.
-3. **Expand the dataset:** If the first two measures are insufficient, add or
-   replace hardware and collect data from more subjects to improve the
-   generality of confidence thresholds and other hyperparameters.
-
-These are proposed experiments, not validated results.
 
 ## 2. Architecture
 
@@ -444,3 +379,30 @@ ros2 run eeg_bci analyze_rosbags \
   latency cannot be separated from BLE, LSL, ROS, and recording delays.
 - The project is a turtlesim demonstrator and requires an independent emergency
   stop for any physical robot.
+
+## 5. Proposed Improvements
+
+Current problems:
+
+1. **Slow response:** Most outputs take more than 4 s, both at startup and
+   after command switches.
+2. **False movement without a target:** Closed-eyes and free-view trials can
+   produce valid commands, so turtlesim may move unexpectedly.
+3. **Limited generality:** Data was collected from one developer with limited
+   hardware, so current thresholds and other hyperparameters are not yet
+   subject- or device-independent.
+
+Proposed directions:
+
+1. **Tune temporal parameters:** Sweep `window_seconds` and `update_period`
+   under controlled conditions. With more data, select them as hyperparameters
+   using held-out validation.
+2. **Reject no-target activity:** Compare voltage and FBCCA-score distributions
+   for closed-eyes and free-view trials against target trials, then design the
+   lightest rejection filter that reduces false movement without materially
+   increasing latency.
+3. **Expand the dataset:** If the first two measures are insufficient, add or
+   replace hardware and collect data from more subjects to improve the
+   generality of confidence thresholds and other hyperparameters.
+
+These are proposed experiments, not validated results.
