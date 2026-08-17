@@ -27,7 +27,17 @@ use_trained_model: false
 
 No score-margin filter or trained model is active in these measurements.
 
-### 1.1 Switching Latency
+### 1.1 Current Problems
+
+1. **Slow response:** Most outputs take more than 4 s, both at startup and
+   after command switches.
+2. **False movement without a target:** Closed-eyes and free-view trials can
+   produce valid commands, so turtlesim may move unexpectedly.
+3. **Limited generality:** Data was collected from one developer with limited
+   hardware, so current thresholds and other hyperparameters are not yet
+   subject- or device-independent.
+
+### 1.2 Switching Latency
 
 Definitions for the table:
 
@@ -92,7 +102,7 @@ first candidate -> valid backward = 3.596 s
 valid backward -> cmd_vel = 0.007 s
 ```
 
-### 1.2 Personalized Confidence Thresholds
+### 1.3 Personalized Confidence Thresholds
 
 For six FBCCA scores `score(k)`, the selected candidate's confidence is:
 
@@ -137,7 +147,7 @@ on consecutive confirmation. `score_margin_threshold` and
 `model_reject_probability_*` are inactive while the two switches above are
 `false`.
 
-### 1.3 Raw FBCCA Command Accuracy
+### 1.4 Raw FBCCA Command Accuracy
 
 Definitions for the table:
 
@@ -162,7 +172,7 @@ Overall raw window accuracy is `1035/1229 = 84.21%`. A 100% majority-trial
 value does not mean every window was correct; it means the expected command was
 the majority candidate in every trial in that group.
 
-### 1.4 No-Target Conditions
+### 1.5 No-Target Conditions
 
 Plain FBCCA always selects one of its six reference frequencies. It has no
 native unknown class at the raw-score stage.
@@ -201,6 +211,21 @@ without a target.
     <td align="center"><strong>Closed eyes</strong><br><img src="supplementary_resources/turtlesim_trimmed_new.gif" width="420" alt="Turtlesim during closed eyes"></td>
   </tr>
 </table>
+
+### 1.6 Proposed Improvements
+
+1. **Tune temporal parameters:** Sweep `window_seconds` and `update_period`
+   under controlled conditions. With more data, select them as hyperparameters
+   using held-out validation.
+2. **Reject no-target activity:** Compare voltage and FBCCA-score distributions
+   for closed-eyes and free-view trials against target trials, then design the
+   lightest rejection filter that reduces false movement without materially
+   increasing latency.
+3. **Expand the dataset:** If the first two measures are insufficient, add or
+   replace hardware and collect data from more subjects to improve the
+   generality of confidence thresholds and other hyperparameters.
+
+These are proposed experiments, not validated results.
 
 ## 2. Architecture
 
