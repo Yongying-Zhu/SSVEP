@@ -17,6 +17,9 @@ canonical correlation analysis (FBCCA).
 
 The results in this section use the original FBCCA path:
 
+The full timing-statistics report is available in
+[`supplementary_resources/timing_statistics.md`](supplementary_resources/timing_statistics.md).
+
 ```yaml
 use_score_margin: false
 use_trained_model: false
@@ -264,7 +267,7 @@ eeg/
 ├── requirements.txt
 ├── start_eeg_turtlesim.sh
 ├── supplementary_resources/
-├── eeg_robag/
+├── eeg_rosbag/
 └── src/
     ├── eeg_interfaces/msg/
     └── eeg_bci/
@@ -338,7 +341,7 @@ ros2 bag record -o experiments/forward_01 \
 Replay EEG frames into a running classifier:
 
 ```bash
-ros2 bag play eeg_robag/forward_01 --topics /eeg/frame --rate 1.0
+ros2 bag play eeg_rosbag/forward_01 --topics /eeg/frame --rate 1.0
 ```
 
 Analyze a command timeline:
