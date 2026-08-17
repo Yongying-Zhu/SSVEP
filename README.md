@@ -73,6 +73,32 @@ is approximately 2.7-3.9 s in the four transitions, and the fixed processing
 terms add approximately 0.6-0.9 s. The theoretical conservative upper bound
 is `4.9 s`.
 
+#### Synthetic forward -> backward slice
+
+To isolate the sliding-window effect, a temporary bag was formed from the first
+13 seconds of `forward_01`, followed by `backward_01` at a point where
+`backward` was already stably valid. Logic regression and margin rejection were
+disabled. Times below start at the synthetic cut:
+
+| Event | Time after cut |
+|---|---:|
+| First raw FBCCA=`backward` candidate | 3.950 s |
+| Valid `/ssvep/command`=`backward` | 5.951 s |
+| Matching `/turtle1/cmd_vel` | 6.020 s |
+
+The candidate sequence was `backward` (3.950 s), `forward` (4.356 s),
+`backward` (4.751 s), `forward` (5.152 s), and `backward` (5.549 s and
+5.951 s). The intervening `forward` candidates reset the two-result
+confirmation, so `5.951 - 3.950 = 2.001 s` elapsed before a valid command and
+`6.020 - 5.951 = 0.069 s` before the matching velocity command.
+
+This shows the main limitation of the 4-second sliding window: joining a
+stable backward segment does not remove the old forward samples already in the
+window. Mixed-window scores can alternate between commands, and every
+inconsistent result restarts confirmation. The delay therefore depends on
+window composition and candidate stability, not only on the nominal `0.4 s`
+classification period.
+
 Definitions for all three tables:
 
 `rosbag/switch_process/switch_01` through `switch_10` are the ten recordings;
