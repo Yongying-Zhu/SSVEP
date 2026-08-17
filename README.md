@@ -292,7 +292,8 @@ eeg/
 ├── requirements.txt
 ├── start_eeg_turtlesim.sh
 ├── supplementary_resources/
-├── eeg_rosbag/
+├── Initialize/                    # local initial recordings, not published
+├── switch_process/                # local command-switch recordings
 └── src/
     ├── eeg_interfaces/msg/
     └── eeg_bci/
@@ -358,7 +359,7 @@ ros2 topic echo /turtle1/pose
 ### 3.4 Record and Replay
 
 ```bash
-ros2 bag record -o experiments/forward_01 \
+ros2 bag record -o Initialize/forward_01 \
   /eeg/frame /eeg/quality /ssvep/command \
   /turtle1/cmd_vel /turtle1/pose /ssvep/stimulus_active
 ```
@@ -366,14 +367,15 @@ ros2 bag record -o experiments/forward_01 \
 Replay EEG frames into a running classifier:
 
 ```bash
-ros2 bag play eeg_rosbag/forward_01 --topics /eeg/frame --rate 1.0
+ros2 bag play /path/to/Initialize/forward_01 \
+  --topics /eeg/frame --rate 1.0
 ```
 
 Analyze a command timeline:
 
 ```bash
 ros2 run eeg_bci analyze_command_timeline \
-  --bag experiments/forward/single_forward_02
+  --bag Initialize/forward/single_forward_02
 ```
 
 Run offline FBCCA analysis without training:
