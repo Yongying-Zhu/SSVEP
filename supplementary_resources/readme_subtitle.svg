@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="76" viewBox="0 0 1080 76" role="img" aria-labelledby="subtitle">
+  <title id="subtitle">EEG-based ROS 2 control of a turtlesim robot using SSVEP and FBCCA</title>
+  <rect x="2" y="2" width="1076" height="72" rx="14" fill="#ECFDF5" stroke="#0F766E" stroke-width="3"/>
+  <text x="540" y="47" text-anchor="middle" font-family="DejaVu Sans, Arial, sans-serif" font-size="23" font-weight="700" fill="#0F766E">EEG-based ROS 2 control using SSVEP and FBCCA</text>
+</svg>

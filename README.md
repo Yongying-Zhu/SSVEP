@@ -1,10 +1,9 @@
 <h1 align="center">
-  <font color="#1D4ED8">SSVEP EEG FBCCA Turtlesim Control</font>
+  <img src="supplementary_resources/readme_title.svg" width="900" alt="SSVEP EEG FBCCA Turtlesim Control">
 </h1>
 
 <p align="center">
-  <strong><font color="#0F766E">EEG-based ROS 2 control of a <code>turtlesim</code>
-  robot using SSVEP and filter-bank canonical correlation analysis (FBCCA)</font></strong>
+  <img src="supplementary_resources/readme_subtitle.svg" width="900" alt="EEG-based ROS 2 control using SSVEP and FBCCA">
 </p>
 
 <p align="center">
@@ -103,7 +102,9 @@ inconsistent result restarts confirmation. The delay therefore depends on
 window composition and candidate stability, not only on the nominal `0.4 s`
 classification period.
 
-Definitions for all three tables:
+<h3>
+  <img src="supplementary_resources/readme_label_tables.svg" width="560" alt="Definitions for all three tables">
+</h3>
 
 `rosbag/switch_process/switch_01` through `switch_10` are the ten recordings;
 each uses `forward -> backward -> left -> right -> stop`.
@@ -154,7 +155,9 @@ keep command-specific thresholds around the observed confidence center: their
 mean is `(0.23 + 0.22 + 0.24 + 0.25 + 0.20 + 0.24) / 6 = 0.23`. This mean is a
 reference operating point, not a replacement for the per-command values.
 
-Definitions for the calibration table:
+<h3>
+  <img src="supplementary_resources/readme_label_calibration.svg" width="560" alt="Definitions for the calibration table">
+</h3>
 
 - `Threshold`: configured per-command minimum confidence.
 - `Correct n`: windows where the expected command and raw FBCCA candidate are
@@ -184,7 +187,9 @@ on consecutive confirmation. `score_margin_threshold` and
 
 ### 1.2 Raw FBCCA Command Accuracy
 
-Definitions for the table:
+<h3>
+  <img src="supplementary_resources/readme_label_accuracy.svg" width="560" alt="Definitions for the raw accuracy table">
+</h3>
 
 - `Single trials` / `All trials`: number of recordings in each stimulation
   mode.
@@ -212,7 +217,9 @@ the majority candidate in every trial in that group.
 Plain FBCCA always selects one of its six reference frequencies. It has no
 native unknown class at the raw-score stage.
 
-Definitions for the table:
+<h3>
+  <img src="supplementary_resources/readme_label_no_target.svg" width="560" alt="Definitions for the no-target table">
+</h3>
 
 - `Trials`: number of recordings for the condition.
 - `FBCCA decisions`: number of analyzed windows.
