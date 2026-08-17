@@ -1,7 +1,11 @@
-# SSVEP_EEG_FBCCA_(WCHAIR)
+<h1 align="center">
+  <font color="#1D4ED8">SSVEP EEG FBCCA Turtlesim Control</font>
+</h1>
 
-EEG-based ROS 2 control of a `turtlesim` robot using SSVEP and filter-bank
-canonical correlation analysis (FBCCA).
+<p align="center">
+  <strong><font color="#0F766E">EEG-based ROS 2 control of a <code>turtlesim</code>
+  robot using SSVEP and filter-bank canonical correlation analysis (FBCCA)</font></strong>
+</p>
 
 <p align="center">
   <img src="supplementary_resources/turtlesim_trimmed.gif" width="500" alt="Turtlesim controlled by EEG">
