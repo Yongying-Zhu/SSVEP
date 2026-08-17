@@ -97,14 +97,22 @@ sequence `forward -> backward -> left -> right -> stop`.
 - `Successful bags`: recordings in which the requested target command was
   reached, shown as successful recordings / ten recordings.
 - `Time interval`: from the end of the previous command phase to the first
-  valid output of the next target command, corresponding to its actual control
-  start.
+  matching `/turtle1/cmd_vel` of the next target command. It includes the raw
+  FBCCA confirmation delay, valid `/ssvep/command` publication, and the bridge
+  delay before the actual control starts.
 - `Mean`: arithmetic mean of the successful transition times, in seconds.
 - `Median`: middle successful transition time, in seconds.
 - `Variance`: sample variance of the successful transition times, in seconds
   squared, using denominator `n - 1`.
 - These values describe command switching after the classifier is already
   running; they do not include the initial 4-second EEG-window loading.
+
+| Processing stage | Recorded event | Meaning |
+|---|---|---|
+| Raw FBCCA candidate | Highest FBCCA score is selected | A candidate is produced, but it is not yet a valid command. |
+| FBCCA confirmation delay | `required_consecutive_results=2` consistent candidates | The candidate must pass the consecutive-confirmation rule. |
+| Valid command output | `/ssvep/command` with `valid=true` | The classifier publishes the confirmed command. |
+| Actual control output | Matching `/turtle1/cmd_vel` | `ssvep_to_turtlesim.py` converts the valid command into motion. |
 
 | Switching | Successful bags | Mean | Median | Variance |
 |---|---:|---:|---:|---:|
