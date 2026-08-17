@@ -206,25 +206,25 @@ without a target.
 
 ```mermaid
 flowchart LR
-    A[8-channel BLE EEG<br/>250 Hz] --> B[ble_to_lsl.py]
-    B --> C[LSL EEG stream]
-    C --> D[lsl_to_ros2.py]
-    D --> E[/eeg/frame<br/>EEGFrame]
-    D --> F[/eeg/quality<br/>SignalQuality]
-    E --> G[ssvep_classifier.py]
+    A["8-channel BLE EEG<br/>250 Hz"] --> B["ble_to_lsl.py"]
+    B --> C["LSL EEG stream"]
+    C --> D["lsl_to_ros2.py"]
+    D --> E["/eeg/frame<br/>EEGFrame"]
+    D --> F["/eeg/quality<br/>SignalQuality"]
+    E --> G["ssvep_classifier.py"]
     F --> G
-    G --> H[4 s window<br/>1000 samples]
-    H --> I[3 filter banks]
-    I --> J[CCA references<br/>4 harmonics]
-    J --> K[Six FBCCA scores]
-    K --> L[Threshold +<br/>two confirmations]
-    L --> M[/ssvep/command]
-    M --> N[ssvep_to_turtlesim.py]
-    N --> O[/turtle1/cmd_vel]
-    O --> P[turtlesim]
-    P --> Q[/turtle1/pose]
+    G --> H["4 s window<br/>1000 samples"]
+    H --> I["3 filter banks"]
+    I --> J["CCA references<br/>4 harmonics"]
+    J --> K["Six FBCCA scores"]
+    K --> L["Threshold +<br/>two confirmations"]
+    L --> M["/ssvep/command"]
+    M --> N["ssvep_to_turtlesim.py"]
+    N --> O["/turtle1/cmd_vel"]
+    O --> P["turtlesim"]
+    P --> Q["/turtle1/pose"]
     Q --> N
-    Q --> R[PsychoPy feedback]
+    Q --> R["PsychoPy feedback"]
 ```
 
 ### 2.1 Concepts
