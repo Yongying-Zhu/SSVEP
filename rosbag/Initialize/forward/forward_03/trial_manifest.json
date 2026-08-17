@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "trial_id": "forward_03",
+  "mode": "single",
+  "target": "forward",
+  "record_start_ns": 1786602949381039378,
+  "record_end_ns": 1786602978791937093,
+  "first_fbcca_output_ns": 1786602963791825346,
+  "operator_start_ns": 1786602963791825346,
+  "operator_end_ns": 1786602978791929020,
+  "duration_seconds": 15.0,
+  "topics": [
+    "/eeg/frame",
+    "/eeg/quality",
+    "/ssvep/command",
+    "/turtle1/cmd_vel",
+    "/turtle1/pose",
+    "/ssvep/stimulus_active"
+  ],
+  "classifier": {
+    "use_trained_model": false,
+    "window_seconds": 4.0,
+    "update_period": 0.4
+  },
+  "stimulus_events": [
+    {
+      "wall_time_ns": 1786602954221589361,
+      "active": true
+    }
+  ],
+  "first_fbcca_output": {
+    "wall_time_ns": 1786602963791825346,
+    "header_stamp_ns": 1786602963791238147,
+    "command": "stop",
+    "fbcca_command": "forward",
+    "valid": false,
+    "reason": "low_confidence",
+    "confidence": 0.21350693702697754
+  },
+  "bag_log": "/home/zyy/eeg/rosbag/Initialize/forward_03.ros2bag.log"
+}

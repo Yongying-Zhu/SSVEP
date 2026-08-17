@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "trial_id": "close_eyes_01",
+  "mode": "all",
+  "condition": "close_eyes",
+  "target": null,
+  "record_start_ns": 1786616300041994806,
+  "record_end_ns": 1786616327778003309,
+  "first_fbcca_output_ns": 1786616312777883318,
+  "operator_start_ns": 1786616312777883318,
+  "operator_end_ns": 1786616327777996851,
+  "duration_seconds": 15.0,
+  "topics": [
+    "/eeg/frame",
+    "/eeg/quality",
+    "/ssvep/command",
+    "/turtle1/cmd_vel",
+    "/turtle1/pose",
+    "/ssvep/stimulus_active"
+  ],
+  "classifier": {
+    "use_trained_model": false,
+    "window_seconds": 4.0,
+    "update_period": 0.4
+  },
+  "stimulus_events": [
+    {
+      "wall_time_ns": 1786616304919769237,
+      "active": true
+    }
+  ],
+  "first_fbcca_output": {
+    "wall_time_ns": 1786616312777883318,
+    "header_stamp_ns": 1786616312777375879,
+    "command": "stop",
+    "fbcca_command": "backward",
+    "valid": false,
+    "reason": "awaiting_confirmation",
+    "confidence": 0.24194662272930145
+  },
+  "bag_log": "/home/zyy/eeg/rosbag/Initialize/close_eyes_01.ros2bag.log"
+}

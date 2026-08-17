@@ -1,0 +1,80 @@
+{
+  "bag": "/home/zyy/eeg/rosbag/Initialize/stop/stop_04",
+  "expected_command": "stop",
+  "time_zero": "first /eeg/frame bag record timestamp",
+  "record_count": 6900,
+  "eeg_frame_count": 4795,
+  "duration_from_first_eeg_seconds": 19.164440449,
+  "events": [
+    {
+      "key": "first_eeg",
+      "label": "First /eeg/frame received (t=0)",
+      "relative_seconds": 0.0,
+      "source": "rosbag record time",
+      "detail": "sequence=0; sample_rate=250 Hz"
+    },
+    {
+      "key": "first_command",
+      "label": "First /ssvep/command after t=0",
+      "relative_seconds": 0.15804894,
+      "source": "rosbag record time",
+      "detail": "FBCCA=--; OUT=stop; valid=False; reason=warming_up; conf=0.000"
+    },
+    {
+      "key": "quality",
+      "label": "First /eeg/quality",
+      "relative_seconds": 1.020568156,
+      "source": "rosbag record time",
+      "detail": "level=good; valid=True"
+    },
+    {
+      "key": "window_ready",
+      "label": "4-second window ready (1000th EEG sample)",
+      "relative_seconds": 3.881199214,
+      "source": "rosbag record time",
+      "detail": "required=1000 samples at 250 Hz"
+    },
+    {
+      "key": "first_fbcca",
+      "label": "First FBCCA candidate",
+      "relative_seconds": 4.178873617,
+      "source": "rosbag record time",
+      "detail": "FBCCA=stop; OUT=stop; valid=False; reason=awaiting_confirmation; conf=0.349"
+    },
+    {
+      "key": "expected_fbcca",
+      "label": "FBCCA candidate = expected 'stop'",
+      "relative_seconds": 4.178873617,
+      "source": "rosbag record time",
+      "detail": "FBCCA=stop; OUT=stop; valid=False; reason=awaiting_confirmation; conf=0.349"
+    },
+    {
+      "key": "expected_valid",
+      "label": "Valid output = expected 'stop'",
+      "relative_seconds": 4.58055039,
+      "source": "rosbag record time",
+      "detail": "FBCCA=stop; OUT=stop; valid=True; reason=fbcca; conf=0.374"
+    },
+    {
+      "key": "cmd_vel",
+      "label": "/turtle1/cmd_vel reflects 'stop'",
+      "relative_seconds": 4.62385431,
+      "source": "rosbag record time",
+      "detail": "linear.x=0.000; angular.z=0.000"
+    },
+    {
+      "key": "pose",
+      "label": "First /turtle1/pose after expected cmd_vel",
+      "relative_seconds": 4.636563806,
+      "source": "rosbag record time",
+      "detail": "x=5.54; y=5.54; theta=0.00; v=0.000; w=0.000"
+    }
+  ],
+  "latencies": {
+    "first_eeg_to_first_fbcca_seconds": 4.178873617,
+    "first_eeg_to_expected_valid_seconds": 4.58055039,
+    "expected_valid_to_cmd_vel_seconds": 0.04330391999999961,
+    "cmd_vel_to_pose_seconds": 0.012709496000000264
+  },
+  "observability_note": "BLE notification, LSL push and LSL pull timestamps are not present in the recorded bag; the first /eeg/frame record is used as t=0."
+}

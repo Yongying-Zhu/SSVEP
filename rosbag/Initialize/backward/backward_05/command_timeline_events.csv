@@ -1,0 +1,10 @@
+key,label,relative_seconds,source,detail
+first_eeg,First /eeg/frame received (t=0),0.0,rosbag record time,sequence=0; sample_rate=250 Hz
+first_command,First /ssvep/command after t=0,0.06297288,rosbag record time,FBCCA=--; OUT=stop; valid=False; reason=warming_up; conf=0.000
+quality,First /eeg/quality,1.00966481,rosbag record time,level=good; valid=True
+window_ready,4-second window ready (1000th EEG sample),4.060863434,rosbag record time,required=1000 samples at 250 Hz
+first_fbcca,First FBCCA candidate,4.491235699,rosbag record time,FBCCA=forward; OUT=stop; valid=False; reason=awaiting_confirmation; conf=0.279
+expected_fbcca,FBCCA candidate = expected 'backward',4.890942776,rosbag record time,FBCCA=backward; OUT=stop; valid=False; reason=awaiting_confirmation; conf=0.284
+expected_valid,Valid output = expected 'backward',5.283021167,rosbag record time,FBCCA=backward; OUT=backward; valid=True; reason=fbcca; conf=0.271
+cmd_vel,/turtle1/cmd_vel reflects 'backward',5.37253689,rosbag record time,linear.x=-1.000; angular.z=0.000
+pose,First /turtle1/pose after expected cmd_vel,5.374405351,rosbag record time,x=5.53; y=5.54; theta=0.00; v=1.000; w=0.000

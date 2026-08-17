@@ -1,0 +1,16 @@
+stdin is not a terminal device. Keyboard handling disabled.[INFO] [1786603165.752224521] [rosbag2_recorder]: Press SPACE for pausing/resuming
+[INFO] [1786603165.753231225] [rosbag2_storage]: Opened database '/home/zyy/eeg/rosbag/Initialize/forward/forward_08/forward_08_0.db3' for READ_WRITE.
+[INFO] [1786603165.753754631] [rosbag2_recorder]: Listening for topics...
+[INFO] [1786603165.753769873] [rosbag2_recorder]: Event publisher thread: Starting
+[INFO] [1786603165.753897113] [rosbag2_recorder]: Recording...
+[INFO] [1786603166.760422656] [rosbag2_recorder]: Subscribed to topic '/turtle1/cmd_vel'
+[INFO] [1786603166.761830881] [rosbag2_recorder]: Subscribed to topic '/turtle1/pose'
+sequence size exceeds remaining buffer
+[INFO] [1786603170.279786661] [rosbag2_recorder]: Subscribed to topic '/ssvep/stimulus_active'
+[INFO] [1786603172.802850685] [rosbag2_recorder]: Subscribed to topic '/eeg/frame'
+[INFO] [1786603172.804156214] [rosbag2_recorder]: Subscribed to topic '/eeg/quality'
+[INFO] [1786603173.307933398] [rosbag2_recorder]: Subscribed to topic '/ssvep/command'
+[INFO] [1786603173.308011707] [rosbag2_recorder]: All requested topics are subscribed. Stopping discovery...
+[INFO] [1786603195.057501786] [rosbag2_cpp]: Writing remaining messages from cache to the bag. It may take a while
+[INFO] [1786603195.058635137] [rosbag2_recorder]: Event publisher thread: Exiting
+[INFO] [1786603195.058707383] [rosbag2_recorder]: Recording stopped

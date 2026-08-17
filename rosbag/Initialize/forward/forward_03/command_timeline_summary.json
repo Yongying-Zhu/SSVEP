@@ -1,0 +1,80 @@
+{
+  "bag": "/home/zyy/eeg/rosbag/Initialize/forward/forward_03",
+  "expected_command": "forward",
+  "time_zero": "first /eeg/frame bag record timestamp",
+  "record_count": 7091,
+  "eeg_frame_count": 4858,
+  "duration_from_first_eeg_seconds": 19.378483,
+  "events": [
+    {
+      "key": "first_eeg",
+      "label": "First /eeg/frame received (t=0)",
+      "relative_seconds": 0.0,
+      "source": "rosbag record time",
+      "detail": "sequence=0; sample_rate=250 Hz"
+    },
+    {
+      "key": "first_command",
+      "label": "First /ssvep/command after t=0",
+      "relative_seconds": 0.356716708,
+      "source": "rosbag record time",
+      "detail": "FBCCA=--; OUT=stop; valid=False; reason=warming_up; conf=0.000"
+    },
+    {
+      "key": "quality",
+      "label": "First /eeg/quality",
+      "relative_seconds": 1.014546185,
+      "source": "rosbag record time",
+      "detail": "level=good; valid=True"
+    },
+    {
+      "key": "window_ready",
+      "label": "4-second window ready (1000th EEG sample)",
+      "relative_seconds": 4.067099944,
+      "source": "rosbag record time",
+      "detail": "required=1000 samples at 250 Hz"
+    },
+    {
+      "key": "first_fbcca",
+      "label": "First FBCCA candidate",
+      "relative_seconds": 4.378866807,
+      "source": "rosbag record time",
+      "detail": "FBCCA=forward; OUT=stop; valid=False; reason=low_confidence; conf=0.214"
+    },
+    {
+      "key": "expected_fbcca",
+      "label": "FBCCA candidate = expected 'forward'",
+      "relative_seconds": 4.378866807,
+      "source": "rosbag record time",
+      "detail": "FBCCA=forward; OUT=stop; valid=False; reason=low_confidence; conf=0.214"
+    },
+    {
+      "key": "expected_valid",
+      "label": "Valid output = expected 'forward'",
+      "relative_seconds": 5.977038645,
+      "source": "rosbag record time",
+      "detail": "FBCCA=forward; OUT=forward; valid=True; reason=fbcca; conf=0.278"
+    },
+    {
+      "key": "cmd_vel",
+      "label": "/turtle1/cmd_vel reflects 'forward'",
+      "relative_seconds": 6.036506955,
+      "source": "rosbag record time",
+      "detail": "linear.x=1.000; angular.z=0.000"
+    },
+    {
+      "key": "pose",
+      "label": "First /turtle1/pose after expected cmd_vel",
+      "relative_seconds": 6.049379738,
+      "source": "rosbag record time",
+      "detail": "x=5.56; y=5.54; theta=0.00; v=1.000; w=0.000"
+    }
+  ],
+  "latencies": {
+    "first_eeg_to_first_fbcca_seconds": 4.378866807,
+    "first_eeg_to_expected_valid_seconds": 5.977038645,
+    "expected_valid_to_cmd_vel_seconds": 0.05946830999999975,
+    "cmd_vel_to_pose_seconds": 0.012872782999999721
+  },
+  "observability_note": "BLE notification, LSL push and LSL pull timestamps are not present in the recorded bag; the first /eeg/frame record is used as t=0."
+}
