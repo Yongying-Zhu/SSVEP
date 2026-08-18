@@ -1,9 +1,7 @@
-<h1 align="center">
-  <img src="https://img.shields.io/badge/-SSVEP_EEG_FBCCA_Turtlesim_Control-1D4ED8?style=for-the-badge" alt="SSVEP EEG FBCCA Turtlesim Control">
-</h1>
+# SSVEP EEG FBCCA Turtlesim Control
 
 <p align="center">
-  <img src="https://img.shields.io/badge/-EEG_based_ROS_2_control_using_SSVEP_and_FBCCA-0F766E?style=for-the-badge" alt="EEG-based ROS 2 control using SSVEP and FBCCA">
+  <img src="https://img.shields.io/badge/-EEG_based_ROS_2_control_using_SSVEP_and_FBCCA-0F766E?style=for-the-badge" height="40" alt="EEG-based ROS 2 control using SSVEP and FBCCA">
 </p>
 
 <p align="center">
@@ -103,7 +101,7 @@ window composition and candidate stability, not only on the nominal `0.4 s`
 classification period.
 
 <h3>
-  <img src="https://img.shields.io/badge/-Definitions_for_all_three_tables-2563EB?style=flat-square" alt="Definitions for all three tables">
+  <img src="https://img.shields.io/badge/-Definitions_for_all_three_tables-2563EB?style=for-the-badge" alt="Definitions for all three tables">
 </h3>
 
 `rosbag/switch_process/switch_01` through `switch_10` are the ten recordings;
@@ -156,7 +154,7 @@ mean is `(0.23 + 0.22 + 0.24 + 0.25 + 0.20 + 0.24) / 6 = 0.23`. This mean is a
 reference operating point, not a replacement for the per-command values.
 
 <h3>
-  <img src="https://img.shields.io/badge/-Definitions_for_the_calibration_table-0F766E?style=flat-square" alt="Definitions for the calibration table">
+  <img src="https://img.shields.io/badge/-Definitions_for_the_calibration_table-0F766E?style=for-the-badge" alt="Definitions for the calibration table">
 </h3>
 
 - `Threshold`: configured per-command minimum confidence.
@@ -188,7 +186,7 @@ on consecutive confirmation. `score_margin_threshold` and
 ### 1.2 Raw FBCCA Command Accuracy
 
 <h3>
-  <img src="https://img.shields.io/badge/-Definitions_for_the_raw_accuracy_table-D97706?style=flat-square" alt="Definitions for the raw accuracy table">
+  <img src="https://img.shields.io/badge/-Definitions_for_the_raw_accuracy_table-D97706?style=for-the-badge" alt="Definitions for the raw accuracy table">
 </h3>
 
 - `Single trials` / `All trials`: number of recordings in each stimulation
@@ -218,7 +216,7 @@ Plain FBCCA always selects one of its six reference frequencies. It has no
 native unknown class at the raw-score stage.
 
 <h3>
-  <img src="https://img.shields.io/badge/-Definitions_for_the_no--target_table-E11D48?style=flat-square" alt="Definitions for the no-target table">
+  <img src="https://img.shields.io/badge/-Definitions_for_the_no--target_table-E11D48?style=for-the-badge" alt="Definitions for the no-target table">
 </h3>
 
 - `Trials`: number of recordings for the condition.
