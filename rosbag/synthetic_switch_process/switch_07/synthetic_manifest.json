@@ -1,0 +1,123 @@
+{
+  "schema_version": 1,
+  "trial_id": "switch_07",
+  "construction": {
+    "initial_prefix_seconds": 13.0,
+    "stable_suffix_start": "first valid=true output matching target command",
+    "input_topics": [
+      "/eeg/frame",
+      "/eeg/quality"
+    ],
+    "generated_event_topic": "/synthetic/switch_event",
+    "classifier_outputs_are_recomputed": true
+  },
+  "source_selection": {
+    "forward": {
+      "bag": "rosbag/Initialize/forward/forward_07",
+      "first_valid_relative_s": 4.75558867,
+      "first_valid_reason": "fbcca",
+      "first_valid_confidence": 0.3584761619567871
+    },
+    "backward": {
+      "bag": "rosbag/Initialize/backward/backward_07",
+      "first_valid_relative_s": 4.826612631,
+      "first_valid_reason": "fbcca",
+      "first_valid_confidence": 0.29181963205337524
+    },
+    "left": {
+      "bag": "rosbag/Initialize/left/left_03",
+      "first_valid_relative_s": 4.31702103,
+      "first_valid_reason": "fbcca",
+      "first_valid_confidence": 0.32484301924705505
+    },
+    "right": {
+      "bag": "rosbag/Initialize/right/right_03",
+      "first_valid_relative_s": 4.882488714,
+      "first_valid_reason": "fbcca",
+      "first_valid_confidence": 0.27712130546569824
+    },
+    "stop": {
+      "bag": "rosbag/Initialize/stop/stop_03",
+      "first_valid_relative_s": 4.523170387,
+      "first_valid_reason": "fbcca",
+      "first_valid_confidence": 0.3605095446109772
+    }
+  },
+  "segments": [
+    {
+      "command": "forward",
+      "role": "initial_prefix",
+      "source_bag": "rosbag/Initialize/forward/forward_07",
+      "source_input_start_ns": 1786603131507626083,
+      "source_cut_after_s": 13.0,
+      "output_start_s": 0.0,
+      "output_end_s": 13.0
+    },
+    {
+      "command": "backward",
+      "role": "stable_suffix",
+      "source_bag": "rosbag/Initialize/backward/backward_07",
+      "source_first_valid_ns": 1786613071183973629,
+      "source_first_valid_relative_s": 4.826612631,
+      "source_stable_data_start_ns": 1786613071249217386,
+      "source_stable_data_end_ns": 1786613085695072482,
+      "output_start_s": 13.0,
+      "output_end_s": 27.449855096
+    },
+    {
+      "command": "left",
+      "role": "stable_suffix",
+      "source_bag": "rosbag/Initialize/left/left_03",
+      "source_first_valid_ns": 1786613506463575773,
+      "source_first_valid_relative_s": 4.31702103,
+      "source_stable_data_start_ns": 1786613506624505458,
+      "source_stable_data_end_ns": 1786613520903553843,
+      "output_start_s": 27.449855096,
+      "output_end_s": 41.732903481
+    },
+    {
+      "command": "right",
+      "role": "stable_suffix",
+      "source_bag": "rosbag/Initialize/right/right_03",
+      "source_first_valid_ns": 1786614042744492519,
+      "source_first_valid_relative_s": 4.882488714,
+      "source_stable_data_start_ns": 1786614042945142713,
+      "source_stable_data_end_ns": 1786614057240107749,
+      "output_start_s": 41.732903481,
+      "output_end_s": 56.031868517
+    },
+    {
+      "command": "stop",
+      "role": "stable_suffix",
+      "source_bag": "rosbag/Initialize/stop/stop_03",
+      "source_first_valid_ns": 1786614309704853258,
+      "source_first_valid_relative_s": 4.523170387,
+      "source_stable_data_start_ns": 1786614309876373684,
+      "source_stable_data_end_ns": 1786614324135047339,
+      "output_start_s": 56.031868517,
+      "output_end_s": 70.294542172
+    }
+  ],
+  "transitions": [
+    {
+      "from": "forward",
+      "to": "backward",
+      "synthetic_time_s": 13.0
+    },
+    {
+      "from": "backward",
+      "to": "left",
+      "synthetic_time_s": 27.449855096
+    },
+    {
+      "from": "left",
+      "to": "right",
+      "synthetic_time_s": 41.732903481
+    },
+    {
+      "from": "right",
+      "to": "stop",
+      "synthetic_time_s": 56.031868517
+    }
+  ]
+}

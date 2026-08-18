@@ -1,0 +1,13 @@
+transition,metric,n,mean_s,median_s,sample_variance_s2
+forward->backward,raw_delay_s,10,3.234227,2.994361,1.306969
+forward->backward,valid_delay_s,10,4.593224,3.788387,3.711147
+forward->backward,cmd_vel_delay_s,10,4.633457,3.860778,3.682013
+backward->left,raw_delay_s,10,2.049188,1.997965,0.885244
+backward->left,valid_delay_s,10,2.810473,2.573656,0.468882
+backward->left,cmd_vel_delay_s,10,2.860780,2.594225,0.442745
+left->right,raw_delay_s,10,2.356826,2.390776,0.014883
+left->right,valid_delay_s,10,2.836259,2.817531,0.021069
+left->right,cmd_vel_delay_s,10,2.877426,2.862666,0.025853
+right->stop,raw_delay_s,10,3.722182,2.033197,16.735889
+right->stop,valid_delay_s,10,4.201052,2.529358,16.312956
+right->stop,cmd_vel_delay_s,10,4.253544,2.557465,16.410248

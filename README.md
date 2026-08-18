@@ -102,6 +102,170 @@ inconsistent result restarts confirmation. The delay therefore depends on
 window composition and candidate stability, not only on the nominal `0.4 s`
 classification period.
 
+#### Recent-window amplitude amplification comparison
+
+The following comparison applies the same temporary amplitude modification to
+the ten synthetic switch bags. At each 4-second FBCCA update, only the newest
+`0.4 s` of the EEG matrix is multiplied by the listed scale; the older `3.6 s`
+remain unchanged. `Baseline` is the same synthetic dataset without this
+modification. The scales are therefore a signal-processing ablation, not new
+physical recordings.
+
+Each synthetic bag contains the complete sequence
+`forward -> backward -> left -> right -> stop`. The transition start is the
+exact `/synthetic/switch_event` marker written when the concatenated segment
+changes, rather than the first new raw command or the midpoint of two raw
+command distributions. The raw endpoint is the first matching raw FBCCA
+candidate after that marker. The valid endpoint is the first matching
+`/ssvep/command` with `valid=true`, and the command-velocity endpoint is the
+first matching `/turtle1/cmd_vel` after the valid endpoint. For each metric,
+only bags with a detected endpoint contribute to the mean, median, and sample
+variance. A cell is formatted as `successful bags/10; mean / median / sample
+variance`, with time in seconds and variance in seconds squared.
+
+##### Switching: raw FBCCA majority-confirmation delay
+
+| Switching | Baseline | 1.25x | 1.5x | 2x | 3x | 4x |
+|---|---:|---:|---:|---:|---:|---:|
+| forward -> backward | 10/10; 3.234/2.994/1.307 | 10/10; 9.872/8.033/101.321 | 10/10; 6.223/5.503/11.716 | 10/10; 6.206/5.303/10.152 | 10/10; 6.332/6.118/11.233 | 10/10; 5.325/4.138/10.882 |
+| backward -> left | 10/10; 2.049/1.998/0.885 | 10/10; 1.529/1.228/2.033 | 10/10; 1.641/1.064/2.582 | 10/10; 1.826/1.448/2.083 | 10/10; 1.590/1.513/1.672 | 10/10; 1.103/1.191/0.891 |
+| left -> right | 10/10; 2.357/2.391/0.015 | 10/10; 3.835/4.209/3.259 | 10/10; 4.388/4.168/6.896 | 10/10; 3.251/3.630/3.176 | 10/10; 2.977/2.964/2.840 | 10/10; 5.050/5.081/10.597 |
+| right -> stop | 10/10; 3.722/2.033/16.736 | 10/10; 3.841/3.815/1.878 | 10/10; 3.634/3.691/2.112 | 10/10; 3.536/3.221/2.556 | 10/10; 2.942/3.240/2.662 | 10/10; 3.015/2.722/6.216 |
+
+##### Switching: valid `/ssvep/command` output delay
+
+| Switching | Baseline | 1.25x | 1.5x | 2x | 3x | 4x |
+|---|---:|---:|---:|---:|---:|---:|
+| forward -> backward | 10/10; 4.593/3.788/3.711 | 8/10; 12.541/9.499/111.618 | 6/10; 8.413/8.178/8.032 | 6/10; 8.434/8.016/8.350 | 6/10; 12.179/8.500/103.368 | 4/10; 14.907/10.719/140.514 |
+| backward -> left | 10/10; 2.810/2.574/0.469 | 10/10; 4.928/4.945/5.196 | 10/10; 4.600/4.095/8.645 | 10/10; 5.386/4.750/8.891 | 10/10; 5.672/4.937/7.338 | 10/10; 8.303/7.743/27.021 |
+| left -> right | 10/10; 2.836/2.818/0.021 | 9/10; 7.188/8.128/11.168 | 9/10; 6.696/7.752/10.567 | 10/10; 6.571/6.367/9.552 | 7/10; 6.716/7.322/10.626 | 6/10; 8.961/9.021/6.014 |
+| right -> stop | 10/10; 4.201/2.529/16.313 | 9/10; 4.841/4.217/2.432 | 9/10; 4.872/4.252/2.290 | 7/10; 4.243/3.974/1.683 | 8/10; 4.828/4.224/5.719 | 9/10; 5.246/4.196/9.171 |
+
+##### Switching: matching `/turtle1/cmd_vel` output delay
+
+| Switching | Baseline | 1.25x | 1.5x | 2x | 3x | 4x |
+|---|---:|---:|---:|---:|---:|---:|
+| forward -> backward | 10/10; 4.633/3.861/3.682 | 8/10; 12.582/9.575/111.567 | 6/10; 8.470/8.218/8.045 | 6/10; 8.480/8.037/8.369 | 6/10; 12.244/8.539/103.731 | 4/10; 14.959/10.784/140.632 |
+| backward -> left | 10/10; 2.861/2.594/0.443 | 10/10; 4.974/5.001/5.201 | 10/10; 4.655/4.105/8.666 | 10/10; 5.430/4.810/8.976 | 10/10; 5.733/4.955/7.388 | 10/10; 8.346/7.763/27.112 |
+| left -> right | 10/10; 2.877/2.863/0.026 | 9/10; 7.236/8.169/11.200 | 9/10; 6.760/7.788/10.667 | 10/10; 6.607/6.410/9.604 | 7/10; 6.763/7.406/10.671 | 6/10; 9.011/9.099/6.056 |
+| right -> stop | 10/10; 4.254/2.557/16.410 | 9/10; 4.882/4.250/2.450 | 9/10; 4.932/4.324/2.265 | 7/10; 4.294/4.068/1.636 | 8/10; 4.881/4.279/5.717 | 9/10; 5.286/4.212/9.144 |
+
+The raw candidate endpoint is present in all 40 transitions for every scale,
+but the later confirmation stages become less reliable as the scale grows.
+Across the 40 valid-command transitions, the successful totals are 40/40 for
+Baseline, 36/40 for `1.25x`, 34/40 for `1.5x`, 33/40 for `2x`, 31/40 for `3x`,
+and 29/40 for `4x`. The corresponding command-velocity endpoint has the same
+success pattern. No scale improves all four transition types or all three
+endpoints. These are exploratory replay results: the temporary replay and
+record path had small `/eeg/frame` gaps, so they should not be interpreted as a
+loss-free physical experiment.
+
+#### Why increasing the newest-window amplitude did not improve switching
+
+The key distinction is that amplitude scaling does not generally increase a
+CCA correlation coefficient. Let `X` be the centered EEG matrix in one
+classification window and `Y_k` the reference sinusoids for command `k`. The
+CCA coefficient used by FBCCA is obtained from
+
+$$
+\rho_k = \max_{a,b}
+\frac{a^T\Sigma_{XY_k}b}
+{\sqrt{a^T\Sigma_{XX}a}\sqrt{b^T\Sigma_{Y_kY_k}b}}.
+$$
+
+FBCCA combines the coefficients from filter-bank bands as
+
+$$
+S_k = \sum_{m=1}^{M} w_m\rho_{k,m}^{2}.
+$$
+
+For a uniform scale `X' = sX`,
+
+$$
+\Sigma_{X'X'} = s^2\Sigma_{XX},
+\qquad
+\Sigma_{X'Y_k} = s\Sigma_{XY_k}.
+$$
+
+The factor `s` cancels between numerator and denominator, so ideal CCA is
+scale-invariant. A larger EEG amplitude is therefore not, by itself, evidence
+of a larger FBCCA score.
+
+The experiment did not scale the whole window. It scaled only the latest `0.4 s`
+of a `4 s` window. With `D = diag(1, ..., 1, s, ..., s)` and the centering
+matrix `H = I - (1/T)11^T`, the transformed data are `X' = XD`, giving
+
+$$
+\Sigma_{X'X'} = \frac{XDHDX^T}{T-1},
+\qquad
+\Sigma_{X'Y_k} = \frac{XDHY_k^T}{T-1}.
+$$
+
+Because `D` is not a scalar multiple of the identity, it cannot cancel from
+the CCA quotient. The operation changes the relative time weighting,
+covariance, and phase balance of the window. It is not equivalent to
+increasing the strength of one already isolated target component.
+
+This can be seen even with a perfect reference. Suppose `x_t = y_t` at every
+sample and the newest fraction of the window is `p`, with `q = 1-p`. After
+scaling only that fraction, the correlation becomes
+
+$$
+\rho(s) = \frac{q + sp}{\sqrt{q+s^2p}}.
+$$
+
+For `p = 0.1`, `rho(2) ~= 0.965` and `rho(4) ~= 0.822`, whereas the unscaled
+window has `rho(1) = 1`. Even a perfectly matching signal can therefore have a
+lower correlation after a local amplitude discontinuity is introduced.
+
+During a real transition, write the old and new portions of the window as
+`(c_o, v_o)` and `(c_n, v_n)`, where `c` is covariance with the target
+reference and `v` is signal variance. A simplified local-correlation model is
+
+$$
+\rho(s) \propto
+\frac{c_o + sc_n}{\sqrt{v_o+s^2v_n}},
+\qquad
+\frac{d\rho}{ds} \propto c_nv_o - sc_ov_n.
+$$
+
+Thus amplification improves the coefficient only under a condition involving
+both covariance and variance. If the newest segment is still a mixture of the
+old command, the target command, noise, or an unstable phase, `c_n` can be
+small or negative while `v_n` remains large. The denominator then grows faster
+than the useful numerator. A non-target command can receive a larger score as
+well, reducing the score margin even when the target score rises.
+
+There is also a time-frequency effect. The operation can be written as
+`x'(t) = w(t)x(t)`, where `w(t) = 1 + (s-1)u(t-t_0)` is a step-like weight inside
+the window. In the frequency domain,
+
+$$
+X'(f) = X(f) * W(f).
+$$
+
+The spectrum of a finite step contains sinc-like side lobes, so local
+amplification creates spectral leakage and broadband transients. FBCCA can
+then observe increased energy in non-target filter-bank bands or in the wrong
+command's reference correlation. Squaring correlations in `S_k` further makes
+large but spurious coefficients influential.
+
+Finally, the classifier does not publish the first raw winner. It requires
+consistent candidates and a confidence/validity check before publishing
+`/ssvep/command`; the turtle bridge then emits the matching velocity. A
+sequence such as `target, old, target` raises a raw candidate early but resets
+the confirmation streak. This explains why local amplification can make raw
+scores look stronger while making valid and `/turtle1/cmd_vel` delays longer or
+even causing missed endpoints.
+
+The mathematical conclusion is therefore precise: uniform amplitude scaling
+is removed by CCA normalization, while newest-only scaling changes the
+covariance geometry and the temporal spectrum of the window. It can amplify
+noise, old-command contamination, phase discontinuities, and non-target
+correlations. Improving switching requires improving the discriminative
+content and stability of the latest window, not merely multiplying its
+amplitude.
+
 <h3>
   <img src="https://img.shields.io/badge/-Definitions_for_all_three_tables-2563EB?style=for-the-badge" alt="Definitions for all three tables">
 </h3>
