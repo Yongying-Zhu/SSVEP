@@ -1,7 +1,9 @@
-# SSVEP EEG FBCCA Turtlesim Control
+<h1 align="center">SSVEP</h1>
+
+<h1 align="center">EEG-based ROS 2 control using SSVEP and FBCCA</h1>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/-EEG_based_ROS_2_control_using_SSVEP_and_FBCCA-0F766E?style=for-the-badge" height="40" alt="EEG-based ROS 2 control using SSVEP and FBCCA">
+  <img src="https://img.shields.io/badge/-SSVEP_FBCCA_ROS_2-0F766E?style=for-the-badge" alt="SSVEP FBCCA ROS 2">
 </p>
 
 <p align="center">
@@ -317,8 +319,13 @@ eeg/
 ├── requirements.txt
 ├── start_eeg_turtlesim.sh
 ├── supplementary_resources/
+│   ├── close_eyes/               # closed-eye recordings
+│   ├── free_view/                # free-view recordings
+│   ├── fft/                      # FFT analysis results
+│   └── timing_statistics.md
 ├── rosbag/
 │   ├── Initialize/                # initial recordings
+│   ├── 6s_swift/                  # 6-second timed switch recordings
 │   └── switch_process/            # command-switch recordings
 └── src/
     ├── eeg_interfaces/msg/
@@ -349,8 +356,8 @@ eeg/
 ### 3.2 Install and Build
 
 ```bash
-git clone https://github.com/Yongying-Zhu/SSVEP_EEG_FBCCA_WCHAIR.git
-cd SSVEP_EEG_FBCCA_WCHAIR
+git clone https://github.com/Yongying-Zhu/SSVEP.git
+cd SSVEP
 
 source /opt/ros/humble/setup.bash
 /usr/bin/python3 -m venv --system-site-packages .venv

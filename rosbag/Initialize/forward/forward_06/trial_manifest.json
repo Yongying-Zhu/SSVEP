@@ -36,6 +36,5 @@
     "valid": false,
     "reason": "awaiting_confirmation",
     "confidence": 0.2400112748146057
-  },
-  "bag_log": "/home/zyy/eeg/rosbag/Initialize/forward_06.ros2bag.log"
+  }
 }
