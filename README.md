@@ -18,7 +18,8 @@
 
 ## 1. Baseline Results
 
-Based on the four `/turtle1/cmd_vel` switching medians, the current turtlesim control frequency is approximately **0.249 Hz**: `(4.556 + 4.282 + 3.388 + 3.853) / 4 = 4.01975 s` per switch, so `1 / 4.01975 = 0.2488 Hz`.
+Across the four `/turtle1/cmd_vel` switching medians, the median switch time
+is `4.01975 s`, equivalent to approximately **0.249 Hz**.
 
 | Switching: raw FBCCA majority-confirmation delay | Successful bags | Mean (s) | Median (s) | Variance (s^2) |
 |---|---:|---:|---:|---:|
@@ -54,9 +55,8 @@ T_switch = T_replace + phi + T_confirmation + delta
 0.4 s <= T_switch < 4.9 s
 ```
 
-`T_replace` is the time for the new command's EEG evidence to make the mixed
-4-second window discriminative. For the `/turtle1/cmd_vel` medians, the
-combined median is:
+`T_replace` is the time for new-command evidence to make the mixed window
+discriminative. For the `/turtle1/cmd_vel` medians:
 
 ```text
 T_cmd_vel,median = (4.556 + 4.282 + 3.388 + 3.853) / 4
@@ -71,17 +71,16 @@ T_replace,median ~= 4.01975 - 0.2 - 0.4 - 0.05
                  = 3.36975 s
 ```
 
-Therefore the measured 3-5 s range is expected: the window replacement term
-is approximately 2.7-3.9 s in the four transitions, and the fixed processing
-terms add approximately 0.6-0.9 s. The theoretical conservative upper bound
-is `4.9 s`.
+This gives a replacement component of approximately 2.7-3.9 s and a
+conservative upper bound of `4.9 s`.
 
-#### Synthetic forward -> backward slice
+<h3>
+  <img src="https://img.shields.io/badge/-Synthetic_forward_to_backward_slice-2563EB?style=for-the-badge" alt="Synthetic forward -> backward slice">
+</h3>
 
-To isolate the sliding-window effect, a temporary bag was formed from the first
-13 seconds of `forward_01`, followed by `backward_01` at a point where
-`backward` was already stably valid. Logic regression and margin rejection were
-disabled. Times below start at the synthetic cut:
+This temporary bag joined the first 13 seconds of `forward_01` to a stable
+`backward_01` segment. Logic regression and margin rejection were disabled; time
+starts at the synthetic cut.
 
 | Event | Time after cut |
 |---|---:|
@@ -89,39 +88,24 @@ disabled. Times below start at the synthetic cut:
 | Valid `/ssvep/command`=`backward` | 5.951 s |
 | Matching `/turtle1/cmd_vel` | 6.020 s |
 
-The candidate sequence was `backward` (3.950 s), `forward` (4.356 s),
-`backward` (4.751 s), `forward` (5.152 s), and `backward` (5.549 s and
-5.951 s). The intervening `forward` candidates reset the two-result
-confirmation, so `5.951 - 3.950 = 2.001 s` elapsed before a valid command and
-`6.020 - 5.951 = 0.069 s` before the matching velocity command.
+The raw candidates alternated between `forward` and `backward`, resetting
+confirmation. Thus the valid-command interval was `2.001 s`, followed by
+`0.069 s` to the matching velocity command. The result demonstrates that delay
+depends on mixed-window composition and candidate stability, not only on the
+`0.4 s` update period.
 
-This shows the main limitation of the 4-second sliding window: joining a
-stable backward segment does not remove the old forward samples already in the
-window. Mixed-window scores can alternate between commands, and every
-inconsistent result restarts confirmation. The delay therefore depends on
-window composition and candidate stability, not only on the nominal `0.4 s`
-classification period.
+<h3>
+  <img src="https://img.shields.io/badge/-Recent_window_amplitude_amplification_comparison-2563EB?style=for-the-badge" alt="Recent-window amplitude amplification comparison">
+</h3>
 
-#### Recent-window amplitude amplification comparison
-
-The following comparison applies the same temporary amplitude modification to
-the ten synthetic switch bags. At each 4-second FBCCA update, only the newest
-`0.4 s` of the EEG matrix is multiplied by the listed scale; the older `3.6 s`
-remain unchanged. `Baseline` is the same synthetic dataset without this
-modification. The scales are therefore a signal-processing ablation, not new
-physical recordings.
-
-Each synthetic bag contains the complete sequence
-`forward -> backward -> left -> right -> stop`. The transition start is the
-exact `/synthetic/switch_event` marker written when the concatenated segment
-changes, rather than the first new raw command or the midpoint of two raw
-command distributions. The raw endpoint is the first matching raw FBCCA
-candidate after that marker. The valid endpoint is the first matching
-`/ssvep/command` with `valid=true`, and the command-velocity endpoint is the
-first matching `/turtle1/cmd_vel` after the valid endpoint. For each metric,
-only bags with a detected endpoint contribute to the mean, median, and sample
-variance. A cell is formatted as `successful bags/10; mean / median / sample
-variance`, with time in seconds and variance in seconds squared.
+This is a temporary replay ablation on ten synthetic bags. At each 4-second
+FBCCA update, only the newest `0.4 s` is multiplied by the listed scale; the
+older `3.6 s` remain unchanged. `Baseline` has no amplification. The sequence
+is `forward -> backward -> left -> right -> stop`, and each transition starts
+at its exact `/synthetic/switch_event` marker. The three endpoints are the
+matching raw FBCCA candidate, valid `/ssvep/command`, and matching
+`/turtle1/cmd_vel`. Each cell is `successful bags/10; mean / median / sample
+variance`, in seconds and seconds squared.
 
 ##### Switching: raw FBCCA majority-confirmation delay
 
@@ -150,15 +134,10 @@ variance`, with time in seconds and variance in seconds squared.
 | left -> right | 10/10; 2.877/2.863/0.026 | 9/10; 7.236/8.169/11.200 | 9/10; 6.760/7.788/10.667 | 10/10; 6.607/6.410/9.604 | 7/10; 6.763/7.406/10.671 | 6/10; 9.011/9.099/6.056 |
 | right -> stop | 10/10; 4.254/2.557/16.410 | 9/10; 4.882/4.250/2.450 | 9/10; 4.932/4.324/2.265 | 7/10; 4.294/4.068/1.636 | 8/10; 4.881/4.279/5.717 | 9/10; 5.286/4.212/9.144 |
 
-The raw candidate endpoint is present in all 40 transitions for every scale,
-but the later confirmation stages become less reliable as the scale grows.
-Across the 40 valid-command transitions, the successful totals are 40/40 for
-Baseline, 36/40 for `1.25x`, 34/40 for `1.5x`, 33/40 for `2x`, 31/40 for `3x`,
-and 29/40 for `4x`. The corresponding command-velocity endpoint has the same
-success pattern. No scale improves all four transition types or all three
-endpoints. These are exploratory replay results: the temporary replay and
-record path had small `/eeg/frame` gaps, so they should not be interpreted as a
-loss-free physical experiment.
+Raw endpoints were found in all 40 transitions, while valid and cmd_vel success
+totals fell from 40/40 at Baseline to 36/40, 34/40, 33/40, 31/40, and 29/40 for
+`1.25x` through `4x`. No scale improves all endpoints. These exploratory replay
+results include small `/eeg/frame` gaps and are not loss-free physical data.
 
 #### Why increasing the newest-window amplitude did not improve switching
 
@@ -488,9 +467,10 @@ eeg/
 │   ├── fft/                      # FFT analysis results
 │   └── timing_statistics.md
 ├── rosbag/
+│   ├── README.md                  # recording conditions
 │   ├── Initialize/                # initial recordings
-│   ├── 6s_swift/                  # 6-second timed switch recordings
-│   └── switch_process/            # command-switch recordings
+│   ├── switch_process/            # command-switch recordings
+│   └── synthetic_switch_process/  # split/concatenated analysis bags
 └── src/
     ├── eeg_interfaces/msg/
     └── eeg_bci/
