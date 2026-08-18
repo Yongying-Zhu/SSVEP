@@ -18,5 +18,6 @@ directory contains its `metadata.yaml` and SQLite bag file, together with
 the analysis files generated for that recording when available.
 
 Closed-eye and free-view recordings, FFT outputs, and other supplementary
-results are stored under `supplementary_resources/` so `rosbag/` contains only
-the command recordings and their metadata.
+results are stored under `supplementary_resources/`. The `rosbag/` tree has no
+recording log files; its remaining analysis summaries stay alongside the
+command recordings that they describe.
